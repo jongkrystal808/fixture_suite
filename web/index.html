@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <link href="/app/output.css" rel="stylesheet">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>治具管理系統</title>
+    <style>
+    .btn{border:1px solid #D1D5DB;border-radius:12px;padding:.5rem .75rem;background:#fff}
+    .btn:hover{background:#f9fafb}
+    .btn-primary{background:#111827;color:#fff;border-color:#111827}
+    .btn-primary:hover{background:#000}
+    .input{border:1px solid #D1D5DB;border-radius:12px;padding:.5rem .75rem;width:100%}
+    .tab{border:1px solid #D1D5DB;border-radius:12px;padding:.5rem .75rem;font-size:.875rem}
+    .tab-active{background:#111827;color:#fff;border-color:#111827}
+    .card{background:#fff;border:1px solid #E5E7EB;border-radius:16px;padding:1rem;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+    .table{width:100%;font-size:.875rem}
+    .table th{text-align:left;color:#6B7280;font-weight:500;padding-bottom:.5rem}
+    .table td{padding:.5rem 0;border-top:1px solid #E5E7EB}
+    .muted{font-size:.75rem;color:#6B7280}
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-900">
+  <!-- Header -->
+  <header class="sticky top-0 bg-white/80 backdrop-blur border-b border-gray-200">
+    <div class="mx-auto max-w-7xl px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="h-8 w-8 rounded-xl bg-gray-900 text-white grid place-items-center font-bold">F</div>
+        <div>
+          <h1 class="text-lg font-semibold">治具管理系統</h1>
+          <p class="text-xs text-gray-500">單頁應用 · FastAPI + MySQL</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <span id="loginState" class="text-xs text-gray-600">未登入</span>
+        <button id="btnLogin" class="btn btn-primary">登入</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Tabs -->
+  <main class="mx-auto max-w-7xl p-4 space-y-6">
+    <nav id="tabs" class="grid grid-cols-2 md:grid-cols-7 gap-2">
+      <button data-tab="dashboard" class="tab tab-active">儀表板</button>
+      <button data-tab="receive" class="tab">收料登記</button>
+      <button data-tab="return" class="tab">退料登記</button>
+      <button data-tab="query" class="tab">查詢</button>
+        <button data-tab="openstations" class="tab">開站數查詢</button>
+      <button data-tab="stats" class="tab">治具統計</button>
+      <button data-tab="logs" class="tab">使用/更換記錄</button>
+      <button data-tab="admin" class="tab">後台管理</button>
+    </nav>
+
+    <!-- 儀表板 -->
+    <section id="tab-dashboard" class="tab-pane">
+      <div class="grid md:grid-cols-4 gap-4">
+        <div class="card text-center">
+          <div class="text-gray-500">total_fixtures</div>
+          <div id="statTotalFixtures" class="text-4xl font-bold">0</div>
+        </div>
+        <div class="card text-center">
+          <div class="text-gray-500">active_fixtures</div>
+          <div id="statActiveFixtures" class="text-4xl font-bold">0</div>
+        </div>
+        <div class="card text-center">
+          <div class="text-gray-500">under_lifespan</div>
+          <div id="statUnderLifespan" class="text-4xl font-bold">0</div>
+        </div>
+        <div class="card text-center">
+          <div class="text-gray-500">need_replacement</div>
+          <div id="statNeedReplacement" class="text-4xl font-bold">0</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 收料 -->
+    <section id="tab-receive" class="tab-pane hidden">
+      <div class="card space-y-3">
+        <h2 class="text-base font-semibold">收料登記</h2>
+        <div class="grid md:grid-cols-5 gap-3">
+          <input id="rc-name" class="input md:col-span-2" placeholder="名稱" />
+          <input id="rc-qty" class="input" type="number" placeholder="數量" />
+          <input id="rc-note" class="input md:col-span-2" placeholder="備註（選填）" />
+          <button id="btnRcAdd" class="btn btn-primary">新增</button>
+          <button id="btnRcReload" class="btn">重新整理</button>
+        </div>
+        <table class="table">
+          <thead><tr><th>ID</th><th>名稱</th><th>數量</th><th>備註</th><th>日期</th></tr></thead>
+          <tbody id="rc-tbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 退料 -->
+    <section id="tab-return" class="tab-pane hidden">
+      <div class="card space-y-3">
+        <h2 class="text-base font-semibold">退料登記</h2>
+        <div class="grid md:grid-cols-5 gap-3">
+          <input id="rt-name" class="input md:col-span-2" placeholder="名稱" />
+          <input id="rt-qty" class="input" type="number" placeholder="數量" />
+          <input id="rt-reason" class="input md:col-span-2" placeholder="原因（選填）" />
+          <button id="btnRtAdd" class="btn btn-primary">新增</button>
+          <button id="btnRtReload" class="btn">重新整理</button>
+        </div>
+        <table class="table">
+          <thead><tr><th>ID</th><th>名稱</th><th>數量</th><th>原因</th><th>日期</th></tr></thead>
+          <tbody id="rt-tbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 查詢 -->
+    <section id="tab-query" class="tab-pane hidden">
+      <div class="card space-y-3">
+        <h2 class="text-base font-semibold">治具查詢</h2>
+        <div class="grid md:grid-cols-5 gap-3">
+          <input id="fx-q" class="input md:col-span-3" placeholder="輸入治具名稱 / 狀態關鍵字" />
+          <button id="btnFxSearch" class="btn btn-primary">查詢</button>
+          <button id="btnFxNew" class="btn">新增治具</button>
+        </div>
+
+        <div class="flex flex-wrap gap-2 items-center">
+          <label class="btn cursor-pointer">
+            匯入 Excel
+            <input id="fx-import" type="file" accept=".xlsx" hidden />
+          </label>
+          <a class="btn" id="fx-template" href="/app/fixtures_import_template.xlsx" download>下載範本</a>
+          <span class="muted">（請把 <code>fixtures_import_template.xlsx</code> 放在 <code>web/</code> 目錄以供下載）</span>
+        </div>
+
+        <table class="table">
+          <thead>
+            <tr><th>ID</th><th>名稱</th><th>狀態</th><th>使用次數</th><th>壽命</th><th></th></tr>
+          </thead>
+          <tbody id="fx-tbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+<section id="tab-openstations" class="tab-pane hidden">
+  <div class="card space-y-3">
+    <h2 class="text-base font-semibold">機種最大開站數查詢</h2>
+    <div class="grid md:grid-cols-4 gap-3">
+      <input id="modelCode" class="input md:col-span-2" placeholder="輸入機種代碼" />
+      <button id="btnCalcStations" class="btn btn-primary">查詢</button>
+    </div>
+    <table class="table mt-3">
+      <thead><tr><th>站別</th><th>可開站數</th></tr></thead>
+      <tbody id="stationTable"></tbody>
+    </table>
+  </div>
+</section>
+
+    <!-- 統計 -->
+    <section id="tab-stats" class="tab-pane hidden">
+      <div class="card space-y-2">
+        <h2 class="text-base font-semibold">治具統計（概覽）</h2>
+        <div class="grid md:grid-cols-4 gap-4">
+          <div class="card text-center"><div class="text-gray-500">治具總數</div><div id="sTotal" class="text-3xl font-bold">0</div></div>
+          <div class="card text-center"><div class="text-gray-500">啟用中</div><div id="sActive" class="text-3xl font-bold">0</div></div>
+          <div class="card text-center"><div class="text-gray-500">壽命內</div><div id="sUnder" class="text-3xl font-bold">0</div></div>
+          <div class="card text-center"><div class="text-gray-500">需更換</div><div id="sReplace" class="text-3xl font-bold">0</div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 使用/更換記錄 -->
+    <section id="tab-logs" class="tab-pane hidden">
+      <div class="card space-y-3">
+        <h2 class="text-base font-semibold">使用 / 更換記錄</h2>
+        <div class="flex gap-3 flex-wrap">
+          <input id="lg-fx" class="input" placeholder="治具名稱 / ID" style="max-width:240px" />
+          <input id="lg-type" class="input" placeholder="動作 (use/replace)" style="max-width:200px" />
+          <input id="lg-note" class="input" placeholder="備註" style="max-width:260px" />
+          <button id="btnLogAdd" class="btn btn-primary">新增記錄</button>
+          <button id="btnLogReload" class="btn">重新整理</button>
+          <a id="btnLogExport" class="btn" href="/logs/export">匯出 CSV</a>
+        </div>
+        <table class="table"><thead><tr><th>時間</th><th>治具</th><th>類型</th><th>備註</th></tr></thead><tbody id="lg-tbody"></tbody></table>
+      </div>
+    </section>
+
+    <!-- 後台管理 -->
+    <section id="tab-admin" class="tab-pane hidden">
+      <div class="card space-y-6">
+        <div class="flex items-center justify-between">
+          <h2 class="text-base font-semibold">後台管理</h2>
+          <button id="btnLogout" class="btn">登出</button>
+        </div>
+
+        <!-- 使用者 -->
+        <div class="space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="font-medium">帳號與權限</h3>
+            <div class="flex gap-2">
+              <input id="us-q" class="input" placeholder="搜尋使用者（帳號 / 角色）" />
+              <button id="btnUsSearch" class="btn">搜尋</button>
+              <button id="btnUsNew" class="btn btn-primary">新增帳號</button>
+            </div>
+          </div>
+          <table class="table"><thead><tr><th>帳號</th><th>角色</th><th class="text-right">操作</th></tr></thead><tbody id="us-tbody"></tbody></table>
+        </div>
+
+        <!-- SMTP -->
+        <div class="space-y-3">
+          <h3 class="font-medium">SMTP 設定</h3>
+          <div class="grid md:grid-cols-5 gap-3">
+            <input id="smtp-host" class="input" placeholder="Host" />
+            <input id="smtp-port" class="input" placeholder="Port" type="number" />
+            <input id="smtp-user" class="input" placeholder="User" />
+            <input id="smtp-pass" class="input" placeholder="Password" type="password" />
+            <input id="smtp-sender" class="input" placeholder="Sender Email" />
+          </div>
+          <div><button id="btnSmtpSave" class="btn btn-primary">保存設定</button></div>
+        </div>
+
+        <!-- 治具資料維護 -->
+        <div class="space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="font-medium">治具資料維護</h3>
+            <div class="flex gap-2">
+              <input id="fxm-code" class="input" placeholder="代碼" />
+              <input id="fxm-name" class="input" placeholder="名稱" />
+              <input id="fxm-spec" class="input" placeholder="規格" />
+              <input id="fxm-note" class="input" placeholder="備註" />
+              <button id="btnFxmAdd" class="btn btn-primary">新增</button>
+              <label class="btn cursor-pointer">匯入xlsx<input id="fxm-xlsx" type="file" accept=".xlsx" hidden/></label>
+            </div>
+          </div>
+          <table class="table"><thead><tr><th>ID</th><th>代碼</th><th>名稱</th><th>規格</th><th>備註</th></tr></thead><tbody id="fxm-tbody"></tbody></table>
+        </div>
+
+        <!-- 機種資料維護 -->
+        <div class="space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="font-medium">機種資料維護</h3>
+            <div class="flex gap-2">
+              <input id="mcm-code" class="input" placeholder="代碼" />
+              <input id="mcm-name" class="input" placeholder="名稱" />
+              <input id="mcm-note" class="input" placeholder="備註" />
+              <button id="btnMcmAdd" class="btn btn-primary">新增</button>
+              <label class="btn cursor-pointer">匯入xlsx<input id="mcm-xlsx" type="file" accept=".xlsx" hidden/></label>
+            </div>
+          </div>
+          <table class="table"><thead><tr><th>ID</th><th>代碼</th><th>名稱</th><th>備註</th></tr></thead><tbody id="mcm-tbody"></tbody></table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- 登入 Modal -->
+  <div id="loginModal" class="fixed inset-0 bg-black/40 hidden items-center justify-center">
+    <div class="bg-white rounded-2xl p-6 w-[360px] space-y-3">
+      <h3 class="text-base font-semibold">登入</h3>
+      <input id="inpUser" class="input" placeholder="帳號：admin" />
+      <input id="inpPass" type="password" class="input" placeholder="密碼：admin" />
+      <p id="loginError" class="text-sm text-red-600 hidden"></p>
+      <div class="flex gap-2 justify-end">
+        <button id="btnLoginCancel" class="btn">取消</button>
+        <button id="btnDoLogin" class="btn btn-primary">登入</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+/* ============ 全域設定 ============ */
+const API = { path: (p)=> p.startsWith('/')? p: ('/'+p) };
+const state = { user: null };
+
+async function api(path, method='GET', body, headers={}){
+  const res = await fetch(API.path(path), {
+    method,
+    headers: {'Content-Type':'application/json', ...headers},
+    body: body ? JSON.stringify(body) : undefined
+  });
+  const ct = res.headers.get('content-type') || '';
+  const data = ct.includes('application/json') ? await res.json() : await res.text();
+  if(!res.ok) throw new Error(typeof data==='string' ? data : JSON.stringify(data));
+  return data;
+}
+
+/* ============ 登入 / 登出 ============ */
+function showLogin(v){
+  const m = document.getElementById('loginModal');
+  m.classList.toggle('hidden', !v); m.classList.toggle('flex', v);
+}
+async function doLogin(){
+  const username = document.getElementById('inpUser').value.trim();
+  const password = document.getElementById('inpPass').value;
+  const err = document.getElementById('loginError'); err.classList.add('hidden'); err.textContent='';
+  try{
+    const resp = await api('/login','POST',{username,password});
+    state.user = resp; localStorage.setItem('fx.user', JSON.stringify(resp));
+    renderAuth(); showLogin(false); goTab('dashboard'); loadDashboard();
+  }catch(e){ err.textContent = '登入失敗：'+e.message; err.classList.remove('hidden'); }
+}
+function doLogout(){ localStorage.removeItem('fx.user'); state.user=null; renderAuth(); goTab('dashboard'); }
+function renderAuth(){
+  const span = document.getElementById('loginState'); const btn = document.getElementById('btnLogin');
+  if(state.user){ span.textContent = `您好，${state.user.username}（${state.user.role}）`; btn.textContent='登出'; btn.onclick=doLogout; }
+  else{ span.textContent = '未登入'; btn.textContent='登入'; btn.onclick=()=>{ showLogin(true); }; }
+}
+
+/* ============ 分頁切換 ============ */
+function goTab(name){
+  document.querySelectorAll('.tab-pane').forEach(el=> el.classList.add('hidden'));
+  const pane = document.getElementById('tab-'+name); if(pane) pane.classList.remove('hidden');
+  document.querySelectorAll('.tab').forEach(b=> b.classList.remove('tab-active'));
+  const btn = document.querySelector(`.tab[data-tab="${name}"]`); if(btn) btn.classList.add('tab-active');
+  if(name==='dashboard') loadDashboard();
+  if(name==='query') loadFixtures();
+  if(name==='logs') loadLogs();
+  if(name==='receive') loadReceipts();
+  if(name==='return') loadReturns();
+  if(name==='admin'){ loadUsers(); loadSMTP(); loadFxModels(); loadMcModels(); }
+}
+
+/* ============ 儀表板/統計 ============ */
+async function loadDashboard(){
+  try{
+    const s = await api('/stats/summary'); // {total_fixtures, active_fixtures, under_lifespan, need_replacement}
+    setNum('statTotalFixtures', s.total_fixtures); setNum('sTotal', s.total_fixtures);
+    setNum('statActiveFixtures', s.active_fixtures); setNum('sActive', s.active_fixtures);
+    setNum('statUnderLifespan', s.under_lifespan); setNum('sUnder', s.under_lifespan);
+    setNum('statNeedReplacement', s.need_replacement); setNum('sReplace', s.need_replacement);
+  }catch(e){ console.error(e); }
+}
+function setNum(id, v){ const el=document.getElementById(id); if(el) el.textContent = v ?? 0; }
+
+/* ============ 收料 ============ */
+async function loadReceipts(){
+  try{
+    const rows = await api('/receipts');
+    document.getElementById('rc-tbody').innerHTML = (rows||[]).map(r=>`
+      <tr><td>${r.id}</td><td>${r.name}</td><td>${r.qty}</td><td>${r.note||''}</td><td>${r.created_at||''}</td></tr>
+    `).join('');
+  }catch(e){ console.error(e); }
+}
+async function addReceipt(){
+  const name = document.getElementById('rc-name').value.trim();
+  const qty = parseInt(document.getElementById('rc-qty').value||'0',10);
+  const note = document.getElementById('rc-note').value.trim();
+  if(!name || !qty) return alert('請輸入名稱與數量');
+  try{
+    await api('/receipts','POST',{name,qty,note});
+    document.getElementById('rc-name').value=''; document.getElementById('rc-qty').value=''; document.getElementById('rc-note').value='';
+    loadReceipts();
+  }catch(e){ alert('新增失敗：'+e.message); }
+}
+
+/* ============ 退料 ============ */
+async function loadReturns(){
+  try{
+    const rows = await api('/returns');
+    document.getElementById('rt-tbody').innerHTML = (rows||[]).map(r=>`
+      <tr><td>${r.id}</td><td>${r.name}</td><td>${r.qty}</td><td>${r.reason||''}</td><td>${r.created_at||''}</td></tr>
+    `).join('');
+  }catch(e){ console.error(e); }
+}
+async function addReturn(){
+  const name = document.getElementById('rt-name').value.trim();
+  const qty = parseInt(document.getElementById('rt-qty').value||'0',10);
+  const reason = document.getElementById('rt-reason').value.trim();
+  if(!name || !qty) return alert('請輸入名稱與數量');
+  try{
+    await api('/returns','POST',{name,qty,reason});
+    document.getElementById('rt-name').value=''; document.getElementById('rt-qty').value=''; document.getElementById('rt-reason').value='';
+    loadReturns();
+  }catch(e){ alert('新增失敗：'+e.message); }
+}
+
+/* ============ 查詢（fixtures）與匯入 ============ */
+async function loadFixtures(q){
+  try{
+    const rows = await api('/fixtures'+(q?`?q=${encodeURIComponent(q)}`:''));
+    document.getElementById('fx-tbody').innerHTML = (rows||[]).map(r=>`
+      <tr>
+        <td>${r.id}</td><td>${r.name}</td><td>${r.status}</td><td>${r.used}</td><td>${r.life_value}</td>
+        <td><button class="btn" onclick="quickUse(${r.id}, '${r.name}')">+使用</button></td>
+      </tr>
+    `).join('');
+  }catch(e){ console.error(e); }
+}
+async function quickUse(id, name){
+  try{
+    await api('/logs','POST',{fixture:name,type:'use',note:`fixture#${id} quick use`});
+    alert('已記錄使用');
+  }catch(e){ alert('記錄失敗：'+e.message); }
+}
+
+async function importFixturesFromXlsx(fileInput){
+  const f = fileInput.files[0]; if(!f) return;
+  const fd = new FormData(); fd.append('file', f);
+  try{
+    const res = await fetch('/fixtures/import_xlsx', { method:'POST', body: fd }); // returns {ok:true}
+    if(!res.ok){ const t=await res.text(); throw new Error(t); }
+    alert('匯入成功'); loadFxModels(); loadFixtures();
+  }catch(e){ alert('匯入失敗：'+e.message); }
+  finally{ fileInput.value=''; }
+}
+
+/* ============ 記錄 ============ */
+async function loadLogs(){
+  try{
+    const rows = await api('/logs');
+    document.getElementById('lg-tbody').innerHTML = (rows||[]).map(r=>`
+      <tr><td>${r.created_at||''}</td><td>${r.fixture}</td><td>${r.type}</td><td>${r.note||''}</td></tr>
+    `).join('');
+  }catch(e){ console.error(e); }
+}
+async function addLog(){
+  const fixture = document.getElementById('lg-fx').value.trim();
+  const type = document.getElementById('lg-type').value.trim();
+  const note = document.getElementById('lg-note').value.trim();
+  if(!fixture || !type) return alert('請填寫治具與動作');
+  try{ await api('/logs','POST',{fixture,type,note}); loadLogs(); }
+  catch(e){ alert('新增失敗：'+e.message); }
+}
+
+/* ============ 後台：使用者 ============ */
+async function loadUsers(){
+  try{
+    const q = document.getElementById('us-q').value.trim();
+    const resp = await api('/users'+(q?`?q=${encodeURIComponent(q)}`:''));
+    const rows = (resp && resp.data) ? resp.data : []; // PageResp.data
+    document.getElementById('us-tbody').innerHTML = rows.map(u=>`
+      <tr>
+        <td>${u.username}</td><td>${u.role}</td>
+        <td class="text-right">
+          <button class="btn" onclick="resetPw('${u.username}')">重設密碼</button>
+          <button class="btn" onclick="delUser('${u.username}')">刪除</button>
+        </td>
+      </tr>
+    `).join('');
+  }catch(e){ console.error(e); }
+}
+async function newUser(){
+  const username = prompt('新帳號：'); if(!username) return;
+  const role = prompt('角色（admin/user）：','user') || 'user';
+  const password = prompt('初始密碼（預設 1234，留空則用預設）：','');
+  try{ await api('/users','POST',{username,role,password}); loadUsers(); }
+  catch(e){ alert('新增失敗：'+e.message); }
+}
+async function resetPw(username){
+  const pw = prompt(`為 ${username} 設定新密碼：`); if(!pw) return;
+  try{ await api(`/users/${encodeURIComponent(username)}`,'PUT',{username, password: pw, role:'user'}); loadUsers(); }
+  catch(e){ alert('重設失敗：'+e.message); }
+}
+async function delUser(username){
+  if(!confirm(`確定刪除 ${username} ?`)) return;
+  try{ await api(`/users/${encodeURIComponent(username)}`,'DELETE'); loadUsers(); }
+  catch(e){ alert('刪除失敗：'+e.message); }
+}
+
+/* ============ 後台：SMTP（表單送出） ============ */
+async function loadSMTP(){
+  // 目前後端未提供 GET 端點；僅提供 POST 保存（見 main.py），因此這裡只負責送出保存。:contentReference[oaicite:3]{index=3}
+}
+async function saveSMTP(){
+  const fd = new FormData();
+  fd.append('host', document.getElementById('smtp-host').value.trim());
+  fd.append('port', document.getElementById('smtp-port').value.trim() || '25');
+  fd.append('user', document.getElementById('smtp-user').value.trim());
+  fd.append('password', document.getElementById('smtp-pass').value);
+  fd.append('sender', document.getElementById('smtp-sender').value.trim());
+  try{
+    const r = await fetch('/settings/smtp',{method:'POST', body: fd});
+    if(!r.ok){ const t=await r.text(); throw new Error(t); }
+    alert('SMTP 設定已保存');
+  }catch(e){ alert('保存失敗：'+e.message); }
+}
+
+/* ============ 後台：治具/機種資料維護 ============ */
+async function loadFxModels(){
+  try{
+    const rows = await api('/fixtures/models');
+    document.getElementById('fxm-tbody').innerHTML = (rows||[]).map(r=>`
+      <tr><td>${r.id}</td><td>${r.code||''}</td><td>${r.name||''}</td><td>${r.spec||''}</td><td>${r.note||''}</td></tr>
+    `).join('');
+  }catch(e){ console.error(e); }
+}
+async function addFxModel(){
+  const code = document.getElementById('fxm-code').value.trim();
+  const name = document.getElementById('fxm-name').value.trim();
+  const spec = document.getElementById('fxm-spec').value.trim();
+  const note = document.getElementById('fxm-note').value.trim();
+  if(!code || !name) return alert('請填寫代碼與名稱');
+  const fd = new FormData(); fd.append('code',code); fd.append('name',name); fd.append('spec',spec); fd.append('note',note);
+  try{
+    const r = await fetch('/fixtures/models',{method:'POST', body: fd});
+    if(!r.ok){ const t=await r.text(); throw new Error(t); }
+    document.getElementById('fxm-code').value=''; document.getElementById('fxm-name').value='';
+    document.getElementById('fxm-spec').value=''; document.getElementById('fxm-note').value='';
+    loadFxModels();
+  }catch(e){ alert('新增失敗：'+e.message); }
+}
+async function importFxModels(inputEl){
+  const f = inputEl.files[0]; if(!f) return;
+  const fd = new FormData(); fd.append('file', f);
+  try{
+    const r = await fetch('/fixtures/import_xlsx',{method:'POST', body: fd}); // 允許欄位：code,name,spec,note
+    if(!r.ok){ const t=await r.text(); throw new Error(t); }
+    alert('匯入成功'); loadFxModels();
+  }catch(e){ alert('匯入失敗：'+e.message); }
+  finally{ inputEl.value=''; }
+}
+
+async function loadMcModels(){
+  try{
+    const rows = await api('/machines/models');
+    document.getElementById('mcm-tbody').innerHTML = (rows||[]).map(r=>`
+      <tr><td>${r.id}</td><td>${r.code||''}</td><td>${r.name||''}</td><td>${r.note||''}</td></tr>
+    `).join('');
+  }catch(e){ console.error(e); }
+}
+async function addMcModel(){
+  const code = document.getElementById('mcm-code').value.trim();
+  const name = document.getElementById('mcm-name').value.trim();
+  const note = document.getElementById('mcm-note').value.trim();
+  if(!code || !name) return alert('請填寫代碼與名稱');
+  const fd = new FormData(); fd.append('code',code); fd.append('name',name); fd.append('note',note);
+  try{
+    const r = await fetch('/machines/models',{method:'POST', body: fd});
+    if(!r.ok){ const t=await r.text(); throw new Error(t); }
+    document.getElementById('mcm-code').value=''; document.getElementById('mcm-name').value=''; document.getElementById('mcm-note').value='';
+    loadMcModels();
+  }catch(e){ alert('新增失敗：'+e.message); }
+}
+async function importMcModels(inputEl){
+  const f = inputEl.files[0]; if(!f) return;
+  const fd = new FormData(); fd.append('file', f);
+  try{
+    const r = await fetch('/machines/import_xlsx',{method:'POST', body: fd});
+    if(!r.ok){ const t=await r.text(); throw new Error(t); }
+    alert('匯入成功'); loadMcModels();
+  }catch(e){ alert('匯入失敗：'+e.message); }
+  finally{ inputEl.value=''; }
+}
+
+/* ============ 綁定事件與啟動 ============ */
+function bindUI(){
+  document.getElementById('btnLogin').onclick = ()=> showLogin(true);
+  document.getElementById('btnLoginCancel').onclick = ()=> showLogin(false);
+  document.getElementById('btnDoLogin').onclick = doLogin;
+  document.getElementById('btnLogout').onclick = doLogout;
+
+  // 收料
+  document.getElementById('btnRcAdd').onclick = addReceipt;
+  document.getElementById('btnRcReload').onclick = loadReceipts;
+
+  // 退料
+  document.getElementById('btnRtAdd').onclick = addReturn;
+  document.getElementById('btnRtReload').onclick = loadReturns;
+
+  // 查詢
+  document.getElementById('btnFxSearch').onclick = ()=> loadFixtures(document.getElementById('fx-q').value.trim());
+  document.getElementById('btnFxNew').onclick = async ()=>{
+    const name = prompt('治具名稱：'); if(!name) return;
+    const life_value = parseInt(prompt('壽命（次數）', '1000')||'1000',10);
+    try{ await api('/fixtures','POST',{name,status:'active',life_type:'count',used:0,life_value}); loadFixtures(); }
+    catch(e){ alert('新增失敗：'+e.message); }
+  };
+  document.getElementById('fx-import').addEventListener('change', e=> importFixturesFromXlsx(e.target));
+  document.getElementById('btnCalcStations').onclick = calcStations;
+
+  // 記錄
+  document.getElementById('btnLogAdd').onclick = addLog;
+  document.getElementById('btnLogReload').onclick = loadLogs;
+
+  // 使用者/SMTP
+  document.getElementById('btnUsSearch').onclick = loadUsers;
+  document.getElementById('btnUsNew').onclick = newUser;
+  document.getElementById('btnSmtpSave').onclick = saveSMTP;
+
+  // 資料維護
+  document.getElementById('btnFxmAdd').onclick = addFxModel;
+  document.getElementById('fxm-xlsx').addEventListener('change', e=> importFxModels(e.target));
+  document.getElementById('btnMcmAdd').onclick = addMcModel;
+  document.getElementById('mcm-xlsx').addEventListener('change', e=> importMcModels(e.target));
+}
+
+async function calcStations(){
+  const code = document.getElementById('modelCode').value.trim();
+  if(!code) return alert('請輸入機種代碼');
+  try{
+    const data = await api(`/models/max_stations?model_code=${encodeURIComponent(code)}`);
+    const tbody = Object.entries(data.stations)
+      .map(([s,n])=>`<tr><td>${s}</td><td>${n}</td></tr>`).join('');
+    document.getElementById('stationTable').innerHTML = tbody;
+  }catch(e){
+    alert('查詢失敗：'+e.message);
+  }
+}
+
+
+(function init(){
+  try{ state.user = JSON.parse(localStorage.getItem('fx.user') || 'null'); }catch{}
+  renderAuth();
+  document.querySelectorAll('.tab').forEach(b=> b.addEventListener('click', ()=> goTab(b.dataset.tab)));
+  bindUI();
+  goTab('dashboard'); loadDashboard();
+})();
+</script>
+</body>
+</html>

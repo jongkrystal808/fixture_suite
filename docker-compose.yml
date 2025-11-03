@@ -1,0 +1,41 @@
+
+
+services:
+  backend:
+    build: .
+    container_name: fixture_api
+    command: bash -c "
+      chmod +x /app/backup/manual_backup.sh &&
+      echo '[INIT] Starting container...' &&
+      /app/backup/manual_backup.sh &&
+      uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
+    volumes:
+      - .:/app
+      - ./backup:/backup
+    ports:
+      - "8000:8000"
+    environment:
+      - DB_HOST=fixture_mysql
+      - DB_PORT=3306
+      - DB_NAME=fixture_management
+      - DB_USER=root
+      - DB_PASS=Chch1014
+    depends_on:
+      - fixture_mysql
+
+  fixture_mysql:
+    image: mysql:8.0
+    container_name: fixture_mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: Chch1014
+      MYSQL_DATABASE: fixture_management
+      TZ: Asia/Taipei
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./backup:/backup
+
+volumes:
+  db_data:
