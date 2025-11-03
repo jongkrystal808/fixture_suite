@@ -164,8 +164,14 @@ def init_tables():
     c.execute("""
         CREATE TABLE IF NOT EXISTS receipts (
             id INT AUTO_INCREMENT PRIMARY KEY,
-            name VARCHAR(255),
-            qty INT,
+            type VARCHAR(20),
+            vendor VARCHAR(255),
+            order_no VARCHAR(255),
+            fixture_code VARCHAR(255),
+            serial_start VARCHAR(255),
+            serial_end VARCHAR(255),
+            serials TEXT,
+            operator VARCHAR(255),
             note VARCHAR(255),
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -175,9 +181,15 @@ def init_tables():
     c.execute("""
         CREATE TABLE IF NOT EXISTS returns_table (
             id INT AUTO_INCREMENT PRIMARY KEY,
-            name VARCHAR(255),
-            qty INT,
-            reason VARCHAR(255),
+            type VARCHAR(20),
+            vendor VARCHAR(255),
+            order_no VARCHAR(255),
+            fixture_code VARCHAR(255),
+            serial_start VARCHAR(255),
+            serial_end VARCHAR(255),
+            serials TEXT,
+            operator VARCHAR(255),
+            note VARCHAR(255),
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     """)
@@ -244,14 +256,26 @@ class FixtureIn(BaseModel):
     life_value: int = 0
 
 class ReceiptIn(BaseModel):
-    name: str
-    qty: int
+    type: str = Field(default="batch")
+    vendor: str = Field(default="")
+    order_no: str = Field(default="")
+    fixture_code: str = Field(default="")
+    serial_start: str = Field(default="")
+    serial_end: str = Field(default="")
+    serials: str = Field(default="")
+    operator: str = Field(default="")
     note: Optional[str] = None
 
 class ReturnIn(BaseModel):
-    name: str
-    qty: int
-    reason: Optional[str] = None
+    type: str = Field(default="batch")
+    vendor: str = Field(default="")
+    order_no: str = Field(default="")
+    fixture_code: str = Field(default="")
+    serial_start: str = Field(default="")
+    serial_end: str = Field(default="")
+    serials: str = Field(default="")
+    operator: str = Field(default="")
+    note: Optional[str] = None
 
 class LogIn(BaseModel):
     fixture: str
@@ -429,7 +453,9 @@ def list_receipts():
 @app.post("/receipts")
 def add_receipt(body: ReceiptIn):
     conn = get_db(); c = conn.cursor()
-    c.execute("INSERT INTO receipts (name, qty, note) VALUES (%s,%s,%s)", (body.name, body.qty, body.note))
+    c.execute("""INSERT INTO receipts (type, vendor, order_no, fixture_code, serial_start, serial_end, serials, operator, note) 
+                 VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+              (body.type, body.vendor, body.order_no, body.fixture_code, body.serial_start, body.serial_end, body.serials, body.operator, body.note))
     conn.commit(); conn.close(); return {"ok": True}
 
 @app.delete("/receipts/{rid}")
@@ -447,7 +473,9 @@ def list_returns():
 @app.post("/returns")
 def add_return(body: ReturnIn):
     conn = get_db(); c = conn.cursor()
-    c.execute("INSERT INTO returns_table (name, qty, reason) VALUES (%s,%s,%s)", (body.name, body.qty, body.reason))
+    c.execute("""INSERT INTO returns_table (type, vendor, order_no, fixture_code, serial_start, serial_end, serials, operator, note) 
+                 VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+              (body.type, body.vendor, body.order_no, body.fixture_code, body.serial_start, body.serial_end, body.serials, body.operator, body.note))
     conn.commit(); conn.close(); return {"ok": True}
 
 @app.delete("/returns/{rid}")

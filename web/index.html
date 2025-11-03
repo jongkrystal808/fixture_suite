@@ -40,72 +40,117 @@
 
   <!-- Tabs -->
   <main class="mx-auto max-w-7xl p-4 space-y-6">
-    <nav id="tabs" class="grid grid-cols-2 md:grid-cols-7 gap-2">
+    <nav id="tabs" class="grid grid-cols-2 md:grid-cols-6 gap-2">
       <button data-tab="dashboard" class="tab tab-active">儀表板</button>
-      <button data-tab="receive" class="tab">收料登記</button>
-      <button data-tab="return" class="tab">退料登記</button>
+      <button data-tab="material" class="tab">收/退料登記</button>
       <button data-tab="query" class="tab">查詢</button>
-        <button data-tab="openstations" class="tab">開站數查詢</button>
-      <button data-tab="stats" class="tab">治具統計</button>
+      <button data-tab="openstations" class="tab">開站數查詢</button>
       <button data-tab="logs" class="tab">使用/更換記錄</button>
       <button data-tab="admin" class="tab">後台管理</button>
     </nav>
 
-    <!-- 儀表板 -->
-    <section id="tab-dashboard" class="tab-pane">
-      <div class="grid md:grid-cols-4 gap-4">
-        <div class="card text-center">
-          <div class="text-gray-500">total_fixtures</div>
-          <div id="statTotalFixtures" class="text-4xl font-bold">0</div>
-        </div>
-        <div class="card text-center">
-          <div class="text-gray-500">active_fixtures</div>
-          <div id="statActiveFixtures" class="text-4xl font-bold">0</div>
-        </div>
-        <div class="card text-center">
-          <div class="text-gray-500">under_lifespan</div>
-          <div id="statUnderLifespan" class="text-4xl font-bold">0</div>
-        </div>
-        <div class="card text-center">
-          <div class="text-gray-500">need_replacement</div>
-          <div id="statNeedReplacement" class="text-4xl font-bold">0</div>
+    <!-- 儀表板（合併儀表板+治具統計+治具狀況總覽） -->
+    <section id="tab-dashboard" class="tab-pane space-y-6">
+      <div class="card space-y-4">
+        <h2 class="text-lg font-semibold">治具統計總覽</h2>
+        <div class="grid md:grid-cols-4 gap-4">
+          <div class="card text-center bg-blue-50">
+            <div class="text-gray-600 text-sm">治具總數</div>
+            <div id="statTotalFixtures" class="text-4xl font-bold text-blue-600">0</div>
+          </div>
+          <div class="card text-center bg-green-50">
+            <div class="text-gray-600 text-sm">啟用中治具</div>
+            <div id="statActiveFixtures" class="text-4xl font-bold text-green-600">0</div>
+          </div>
+          <div class="card text-center bg-yellow-50">
+            <div class="text-gray-600 text-sm">壽命內治具</div>
+            <div id="statUnderLifespan" class="text-4xl font-bold text-yellow-600">0</div>
+          </div>
+          <div class="card text-center bg-red-50">
+            <div class="text-gray-600 text-sm">需更換治具</div>
+            <div id="statNeedReplacement" class="text-4xl font-bold text-red-600">0</div>
+          </div>
         </div>
       </div>
-    </section>
 
-    <!-- 收料 -->
-    <section id="tab-receive" class="tab-pane hidden">
       <div class="card space-y-3">
-        <h2 class="text-base font-semibold">收料登記</h2>
-        <div class="grid md:grid-cols-5 gap-3">
-          <input id="rc-name" class="input md:col-span-2" placeholder="名稱" />
-          <input id="rc-qty" class="input" type="number" placeholder="數量" />
-          <input id="rc-note" class="input md:col-span-2" placeholder="備註（選填）" />
-          <button id="btnRcAdd" class="btn btn-primary">新增</button>
-          <button id="btnRcReload" class="btn">重新整理</button>
-        </div>
+        <h2 class="text-base font-semibold">最近收料記錄</h2>
         <table class="table">
-          <thead><tr><th>ID</th><th>名稱</th><th>數量</th><th>備註</th><th>日期</th></tr></thead>
-          <tbody id="rc-tbody"></tbody>
+          <thead><tr><th>類型</th><th>廠商</th><th>單號</th><th>治具編號</th><th>操作人員</th><th>日期</th></tr></thead>
+          <tbody id="dash-receipts"></tbody>
+        </table>
+      </div>
+
+      <div class="card space-y-3">
+        <h2 class="text-base font-semibold">最近退料記錄</h2>
+        <table class="table">
+          <thead><tr><th>類型</th><th>廠商</th><th>單號</th><th>治具編號</th><th>操作人員</th><th>日期</th></tr></thead>
+          <tbody id="dash-returns"></tbody>
         </table>
       </div>
     </section>
 
-    <!-- 退料 -->
-    <section id="tab-return" class="tab-pane hidden">
-      <div class="card space-y-3">
-        <h2 class="text-base font-semibold">退料登記</h2>
-        <div class="grid md:grid-cols-5 gap-3">
-          <input id="rt-name" class="input md:col-span-2" placeholder="名稱" />
-          <input id="rt-qty" class="input" type="number" placeholder="數量" />
-          <input id="rt-reason" class="input md:col-span-2" placeholder="原因（選填）" />
-          <button id="btnRtAdd" class="btn btn-primary">新增</button>
-          <button id="btnRtReload" class="btn">重新整理</button>
+    <!-- 收/退料登記（合併） -->
+    <section id="tab-material" class="tab-pane hidden">
+      <div class="card space-y-4">
+        <div class="flex items-center gap-4">
+          <h2 class="text-base font-semibold">收/退料登記</h2>
+          <div class="flex gap-2">
+            <button id="btnMaterialReceive" class="btn btn-primary">收料</button>
+            <button id="btnMaterialReturn" class="btn">退料</button>
+          </div>
         </div>
-        <table class="table">
-          <thead><tr><th>ID</th><th>名稱</th><th>數量</th><th>原因</th><th>日期</th></tr></thead>
-          <tbody id="rt-tbody"></tbody>
-        </table>
+
+        <!-- 類型選擇 -->
+        <div class="flex gap-2">
+          <label class="flex items-center gap-2">
+            <input type="radio" name="material-type" value="batch" checked />
+            <span>批量</span>
+          </label>
+          <label class="flex items-center gap-2">
+            <input type="radio" name="material-type" value="single" />
+            <span>少量</span>
+          </label>
+        </div>
+
+        <!-- 表單 -->
+        <div class="grid md:grid-cols-4 gap-3">
+          <input id="mat-vendor" class="input" placeholder="廠商" />
+          <input id="mat-order-no" class="input" placeholder="單號" />
+          <input id="mat-fixture-code" class="input" placeholder="治具編號" />
+          <input id="mat-operator" class="input" placeholder="操作人員" readonly />
+        </div>
+
+        <!-- 批量欄位 -->
+        <div id="batch-fields" class="grid md:grid-cols-2 gap-3">
+          <input id="mat-serial-start" class="input" placeholder="流水號起始" />
+          <input id="mat-serial-end" class="input" placeholder="流水號結束" />
+        </div>
+
+        <!-- 少量欄位 -->
+        <div id="single-fields" class="grid md:grid-cols-1 gap-3 hidden">
+          <input id="mat-serials" class="input" placeholder="序號（多個序號請用逗號分隔）" />
+        </div>
+
+        <div class="grid md:grid-cols-6 gap-3">
+          <input id="mat-note" class="input md:col-span-4" placeholder="備註（選填）" />
+          <button id="btnMatAdd" class="btn btn-primary">新增</button>
+          <button id="btnMatReload" class="btn">重新整理</button>
+        </div>
+
+        <!-- 記錄表格 -->
+        <div class="border-t pt-4">
+          <h3 class="text-sm font-semibold mb-2" id="mat-table-title">收料記錄</h3>
+          <table class="table">
+            <thead>
+              <tr>
+                <th>ID</th><th>類型</th><th>廠商</th><th>單號</th><th>治具編號</th>
+                <th>流水號/序號</th><th>操作人員</th><th>備註</th><th>日期</th><th></th>
+              </tr>
+            </thead>
+            <tbody id="mat-tbody"></tbody>
+          </table>
+        </div>
       </div>
     </section>
 
@@ -151,19 +196,6 @@
   </div>
 </section>
 
-    <!-- 統計 -->
-    <section id="tab-stats" class="tab-pane hidden">
-      <div class="card space-y-2">
-        <h2 class="text-base font-semibold">治具統計（概覽）</h2>
-        <div class="grid md:grid-cols-4 gap-4">
-          <div class="card text-center"><div class="text-gray-500">治具總數</div><div id="sTotal" class="text-3xl font-bold">0</div></div>
-          <div class="card text-center"><div class="text-gray-500">啟用中</div><div id="sActive" class="text-3xl font-bold">0</div></div>
-          <div class="card text-center"><div class="text-gray-500">壽命內</div><div id="sUnder" class="text-3xl font-bold">0</div></div>
-          <div class="card text-center"><div class="text-gray-500">需更換</div><div id="sReplace" class="text-3xl font-bold">0</div></div>
-        </div>
-      </div>
-    </section>
-
     <!-- 使用/更換記錄 -->
     <section id="tab-logs" class="tab-pane hidden">
       <div class="card space-y-3">
@@ -182,14 +214,22 @@
 
     <!-- 後台管理 -->
     <section id="tab-admin" class="tab-pane hidden">
-      <div class="card space-y-6">
+      <div class="card space-y-4">
         <div class="flex items-center justify-between">
           <h2 class="text-base font-semibold">後台管理</h2>
           <button id="btnLogout" class="btn">登出</button>
         </div>
 
-        <!-- 使用者 -->
-        <div class="space-y-3">
+        <!-- 後台子分頁 -->
+        <nav class="flex gap-2 border-b pb-2">
+          <button data-admin-tab="users" class="admin-tab tab tab-active">帳號與權限</button>
+          <button data-admin-tab="smtp" class="admin-tab tab">SMTP 設定</button>
+          <button data-admin-tab="fixtures" class="admin-tab tab">治具資料維護</button>
+          <button data-admin-tab="machines" class="admin-tab tab">機種資料維護</button>
+        </nav>
+
+        <!-- 使用者管理 -->
+        <div id="admin-users" class="admin-pane space-y-3">
           <div class="flex items-center justify-between">
             <h3 class="font-medium">帳號與權限</h3>
             <div class="flex gap-2">
@@ -201,8 +241,8 @@
           <table class="table"><thead><tr><th>帳號</th><th>角色</th><th class="text-right">操作</th></tr></thead><tbody id="us-tbody"></tbody></table>
         </div>
 
-        <!-- SMTP -->
-        <div class="space-y-3">
+        <!-- SMTP 設定 -->
+        <div id="admin-smtp" class="admin-pane space-y-3 hidden">
           <h3 class="font-medium">SMTP 設定</h3>
           <div class="grid md:grid-cols-5 gap-3">
             <input id="smtp-host" class="input" placeholder="Host" />
@@ -215,14 +255,14 @@
         </div>
 
         <!-- 治具資料維護 -->
-        <div class="space-y-3">
-          <div class="flex items-center justify-between">
-            <h3 class="font-medium">治具資料維護</h3>
+        <div id="admin-fixtures" class="admin-pane space-y-3 hidden">
+          <h3 class="font-medium">治具資料維護</h3>
+          <div class="grid md:grid-cols-5 gap-3">
+            <input id="fxm-code" class="input" placeholder="代碼*" />
+            <input id="fxm-name" class="input" placeholder="名稱*" />
+            <input id="fxm-spec" class="input" placeholder="規格" />
+            <input id="fxm-note" class="input" placeholder="備註" />
             <div class="flex gap-2">
-              <input id="fxm-code" class="input" placeholder="代碼" />
-              <input id="fxm-name" class="input" placeholder="名稱" />
-              <input id="fxm-spec" class="input" placeholder="規格" />
-              <input id="fxm-note" class="input" placeholder="備註" />
               <button id="btnFxmAdd" class="btn btn-primary">新增</button>
               <label class="btn cursor-pointer">匯入xlsx<input id="fxm-xlsx" type="file" accept=".xlsx" hidden/></label>
             </div>
@@ -231,13 +271,13 @@
         </div>
 
         <!-- 機種資料維護 -->
-        <div class="space-y-3">
-          <div class="flex items-center justify-between">
-            <h3 class="font-medium">機種資料維護</h3>
+        <div id="admin-machines" class="admin-pane space-y-3 hidden">
+          <h3 class="font-medium">機種資料維護</h3>
+          <div class="grid md:grid-cols-4 gap-3">
+            <input id="mcm-code" class="input" placeholder="代碼*" />
+            <input id="mcm-name" class="input" placeholder="名稱*" />
+            <input id="mcm-note" class="input" placeholder="備註" />
             <div class="flex gap-2">
-              <input id="mcm-code" class="input" placeholder="代碼" />
-              <input id="mcm-name" class="input" placeholder="名稱" />
-              <input id="mcm-note" class="input" placeholder="備註" />
               <button id="btnMcmAdd" class="btn btn-primary">新增</button>
               <label class="btn cursor-pointer">匯入xlsx<input id="mcm-xlsx" type="file" accept=".xlsx" hidden/></label>
             </div>
@@ -262,10 +302,49 @@
     </div>
   </div>
 
+  <!-- 新增治具 Modal -->
+  <div id="newFixtureModal" class="fixed inset-0 bg-black/40 hidden items-center justify-center">
+    <div class="bg-white rounded-2xl p-6 w-[500px] space-y-4">
+      <h3 class="text-base font-semibold">新增治具</h3>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="text-sm text-gray-600">名稱*</label>
+          <input id="nf-name" class="input" placeholder="治具名稱" />
+        </div>
+        <div>
+          <label class="text-sm text-gray-600">狀態*</label>
+          <select id="nf-status" class="input">
+            <option value="active">active</option>
+            <option value="inactive">inactive</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-sm text-gray-600">壽命類型*</label>
+          <select id="nf-life-type" class="input">
+            <option value="count">count</option>
+            <option value="time">time</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-sm text-gray-600">已使用次數*</label>
+          <input id="nf-used" class="input" type="number" value="0" />
+        </div>
+        <div class="col-span-2">
+          <label class="text-sm text-gray-600">壽命值*</label>
+          <input id="nf-life-value" class="input" type="number" value="1000" placeholder="例如：1000" />
+        </div>
+      </div>
+      <div class="flex gap-2 justify-end">
+        <button id="btnNewFixtureCancel" class="btn">取消</button>
+        <button id="btnNewFixtureSave" class="btn btn-primary">確定新增</button>
+      </div>
+    </div>
+  </div>
+
 <script>
 /* ============ 全域設定 ============ */
 const API = { path: (p)=> p.startsWith('/')? p: ('/'+p) };
-const state = { user: null };
+const state = { user: null, materialMode: 'receive' };
 
 async function api(path, method='GET', body, headers={}){
   const res = await fetch(API.path(path), {
@@ -292,12 +371,17 @@ async function doLogin(){
     const resp = await api('/login','POST',{username,password});
     state.user = resp; localStorage.setItem('fx.user', JSON.stringify(resp));
     renderAuth(); showLogin(false); goTab('dashboard'); loadDashboard();
+    document.getElementById('mat-operator').value = username;
   }catch(e){ err.textContent = '登入失敗：'+e.message; err.classList.remove('hidden'); }
 }
 function doLogout(){ localStorage.removeItem('fx.user'); state.user=null; renderAuth(); goTab('dashboard'); }
 function renderAuth(){
   const span = document.getElementById('loginState'); const btn = document.getElementById('btnLogin');
-  if(state.user){ span.textContent = `您好，${state.user.username}（${state.user.role}）`; btn.textContent='登出'; btn.onclick=doLogout; }
+  if(state.user){
+    span.textContent = `您好，${state.user.username}（${state.user.role}）`;
+    btn.textContent='登出'; btn.onclick=doLogout;
+    document.getElementById('mat-operator').value = state.user.username;
+  }
   else{ span.textContent = '未登入'; btn.textContent='登入'; btn.onclick=()=>{ showLogin(true); }; }
 }
 
@@ -310,101 +394,218 @@ function goTab(name){
   if(name==='dashboard') loadDashboard();
   if(name==='query') loadFixtures();
   if(name==='logs') loadLogs();
-  if(name==='receive') loadReceipts();
-  if(name==='return') loadReturns();
-  if(name==='admin'){ loadUsers(); loadSMTP(); loadFxModels(); loadMcModels(); }
+  if(name==='material') loadMaterialRecords();
+  if(name==='admin'){ goAdminTab('users'); }
 }
 
-/* ============ 儀表板/統計 ============ */
+/* 後台子分頁切換 */
+function goAdminTab(name){
+  document.querySelectorAll('.admin-pane').forEach(el=> el.classList.add('hidden'));
+  const pane = document.getElementById('admin-'+name); if(pane) pane.classList.remove('hidden');
+  document.querySelectorAll('.admin-tab').forEach(b=> b.classList.remove('tab-active'));
+  const btn = document.querySelector(`.admin-tab[data-admin-tab="${name}"]`); if(btn) btn.classList.add('tab-active');
+  if(name==='users') loadUsers();
+  if(name==='smtp') loadSMTP();
+  if(name==='fixtures') loadFxModels();
+  if(name==='machines') loadMcModels();
+}
+
+/* ============ 儀表板 ============ */
 async function loadDashboard(){
   try{
-    const s = await api('/stats/summary'); // {total_fixtures, active_fixtures, under_lifespan, need_replacement}
-    setNum('statTotalFixtures', s.total_fixtures); setNum('sTotal', s.total_fixtures);
-    setNum('statActiveFixtures', s.active_fixtures); setNum('sActive', s.active_fixtures);
-    setNum('statUnderLifespan', s.under_lifespan); setNum('sUnder', s.under_lifespan);
-    setNum('statNeedReplacement', s.need_replacement); setNum('sReplace', s.need_replacement);
+    const s = await api('/stats/summary');
+    setNum('statTotalFixtures', s.total_fixtures);
+    setNum('statActiveFixtures', s.active_fixtures);
+    setNum('statUnderLifespan', s.under_lifespan);
+    setNum('statNeedReplacement', s.need_replacement);
+
+    // 載入最近收料記錄
+    const receipts = await api('/receipts');
+    document.getElementById('dash-receipts').innerHTML = (receipts||[]).slice(0,5).map(r=>`
+      <tr>
+        <td>${r.type||'批量'}</td><td>${r.vendor||''}</td><td>${r.order_no||''}</td>
+        <td>${r.fixture_code||''}</td><td>${r.operator||''}</td><td>${r.created_at||''}</td>
+      </tr>
+    `).join('');
+
+    // 載入最近退料記錄
+    const returns = await api('/returns');
+    document.getElementById('dash-returns').innerHTML = (returns||[]).slice(0,5).map(r=>`
+      <tr>
+        <td>${r.type||'批量'}</td><td>${r.vendor||''}</td><td>${r.order_no||''}</td>
+        <td>${r.fixture_code||''}</td><td>${r.operator||''}</td><td>${r.created_at||''}</td>
+      </tr>
+    `).join('');
   }catch(e){ console.error(e); }
 }
 function setNum(id, v){ const el=document.getElementById(id); if(el) el.textContent = v ?? 0; }
 
-/* ============ 收料 ============ */
-async function loadReceipts(){
+/* ============ 收/退料 ============ */
+function switchMaterialMode(mode){
+  state.materialMode = mode;
+  const isReceive = mode === 'receive';
+  document.getElementById('btnMaterialReceive').classList.toggle('btn-primary', isReceive);
+  document.getElementById('btnMaterialReceive').classList.toggle('btn', !isReceive);
+  document.getElementById('btnMaterialReturn').classList.toggle('btn-primary', !isReceive);
+  document.getElementById('btnMaterialReturn').classList.toggle('btn', isReceive);
+  document.getElementById('mat-table-title').textContent = isReceive ? '收料記錄' : '退料記錄';
+  loadMaterialRecords();
+}
+
+function toggleMaterialType(){
+  const isBatch = document.querySelector('input[name="material-type"]:checked').value === 'batch';
+  document.getElementById('batch-fields').classList.toggle('hidden', !isBatch);
+  document.getElementById('single-fields').classList.toggle('hidden', isBatch);
+}
+
+async function loadMaterialRecords(){
+  const endpoint = state.materialMode === 'receive' ? '/receipts' : '/returns';
   try{
-    const rows = await api('/receipts');
-    document.getElementById('rc-tbody').innerHTML = (rows||[]).map(r=>`
-      <tr><td>${r.id}</td><td>${r.name}</td><td>${r.qty}</td><td>${r.note||''}</td><td>${r.created_at||''}</td></tr>
-    `).join('');
+    const rows = await api(endpoint);
+    document.getElementById('mat-tbody').innerHTML = (rows||[]).map(r=>{
+      const serial = r.type === 'batch' ? `${r.serial_start||''}-${r.serial_end||''}` : (r.serials||'');
+      return `
+        <tr>
+          <td>${r.id}</td><td>${r.type||''}</td><td>${r.vendor||''}</td><td>${r.order_no||''}</td>
+          <td>${r.fixture_code||''}</td><td>${serial}</td><td>${r.operator||''}</td>
+          <td>${r.note||''}</td><td>${r.created_at||''}</td>
+          <td><button class="btn" onclick="deleteMaterial(${r.id})">刪除</button></td>
+        </tr>
+      `;
+    }).join('');
   }catch(e){ console.error(e); }
 }
-async function addReceipt(){
-  const name = document.getElementById('rc-name').value.trim();
-  const qty = parseInt(document.getElementById('rc-qty').value||'0',10);
-  const note = document.getElementById('rc-note').value.trim();
-  if(!name || !qty) return alert('請輸入名稱與數量');
+
+async function addMaterial(){
+  const type = document.querySelector('input[name="material-type"]:checked').value;
+  const vendor = document.getElementById('mat-vendor').value.trim();
+  const order_no = document.getElementById('mat-order-no').value.trim();
+  const fixture_code = document.getElementById('mat-fixture-code').value.trim();
+  const operator = document.getElementById('mat-operator').value.trim();
+  const note = document.getElementById('mat-note').value.trim();
+
+  if(!vendor || !order_no || !fixture_code) {
+    return alert('請填寫廠商、單號和治具編號');
+  }
+
+  const body = { type, vendor, order_no, fixture_code, operator, note };
+
+  if(type === 'batch'){
+    body.serial_start = document.getElementById('mat-serial-start').value.trim();
+    body.serial_end = document.getElementById('mat-serial-end').value.trim();
+    if(!body.serial_start || !body.serial_end) return alert('請填寫流水號起始和結束');
+  } else {
+    body.serials = document.getElementById('mat-serials').value.trim();
+    if(!body.serials) return alert('請填寫序號');
+  }
+
+  const endpoint = state.materialMode === 'receive' ? '/receipts' : '/returns';
   try{
-    await api('/receipts','POST',{name,qty,note});
-    document.getElementById('rc-name').value=''; document.getElementById('rc-qty').value=''; document.getElementById('rc-note').value='';
-    loadReceipts();
+    await api(endpoint, 'POST', body);
+    document.getElementById('mat-vendor').value = '';
+    document.getElementById('mat-order-no').value = '';
+    document.getElementById('mat-fixture-code').value = '';
+    document.getElementById('mat-serial-start').value = '';
+    document.getElementById('mat-serial-end').value = '';
+    document.getElementById('mat-serials').value = '';
+    document.getElementById('mat-note').value = '';
+    loadMaterialRecords();
   }catch(e){ alert('新增失敗：'+e.message); }
 }
 
-/* ============ 退料 ============ */
-async function loadReturns(){
+async function deleteMaterial(id){
+  if(!confirm('確定刪除？')) return;
+  const endpoint = state.materialMode === 'receive' ? `/receipts/${id}` : `/returns/${id}`;
   try{
-    const rows = await api('/returns');
-    document.getElementById('rt-tbody').innerHTML = (rows||[]).map(r=>`
-      <tr><td>${r.id}</td><td>${r.name}</td><td>${r.qty}</td><td>${r.reason||''}</td><td>${r.created_at||''}</td></tr>
-    `).join('');
-  }catch(e){ console.error(e); }
-}
-async function addReturn(){
-  const name = document.getElementById('rt-name').value.trim();
-  const qty = parseInt(document.getElementById('rt-qty').value||'0',10);
-  const reason = document.getElementById('rt-reason').value.trim();
-  if(!name || !qty) return alert('請輸入名稱與數量');
-  try{
-    await api('/returns','POST',{name,qty,reason});
-    document.getElementById('rt-name').value=''; document.getElementById('rt-qty').value=''; document.getElementById('rt-reason').value='';
-    loadReturns();
-  }catch(e){ alert('新增失敗：'+e.message); }
+    await api(endpoint, 'DELETE');
+    loadMaterialRecords();
+  }catch(e){ alert('刪除失敗：'+e.message); }
 }
 
-/* ============ 查詢（fixtures）與匯入 ============ */
-async function loadFixtures(q){
+/* ============ 查詢 / 治具管理 ============ */
+async function loadFixtures(q=''){
   try{
     const rows = await api('/fixtures'+(q?`?q=${encodeURIComponent(q)}`:''));
     document.getElementById('fx-tbody').innerHTML = (rows||[]).map(r=>`
       <tr>
         <td>${r.id}</td><td>${r.name}</td><td>${r.status}</td><td>${r.used}</td><td>${r.life_value}</td>
-        <td><button class="btn" onclick="quickUse(${r.id}, '${r.name}')">+使用</button></td>
+        <td class="text-right">
+          <button class="btn" onclick="editFixture(${r.id})">編輯</button>
+          <button class="btn" onclick="delFixture(${r.id})">刪除</button>
+        </td>
       </tr>
     `).join('');
   }catch(e){ console.error(e); }
 }
-async function quickUse(id, name){
-  try{
-    await api('/logs','POST',{fixture:name,type:'use',note:`fixture#${id} quick use`});
-    alert('已記錄使用');
-  }catch(e){ alert('記錄失敗：'+e.message); }
+
+function showNewFixtureModal(show){
+  const m = document.getElementById('newFixtureModal');
+  m.classList.toggle('hidden', !show);
+  m.classList.toggle('flex', show);
 }
 
-async function importFixturesFromXlsx(fileInput){
-  const f = fileInput.files[0]; if(!f) return;
+async function saveNewFixture(){
+  const name = document.getElementById('nf-name').value.trim();
+  const status = document.getElementById('nf-status').value;
+  const life_type = document.getElementById('nf-life-type').value;
+  const used = parseInt(document.getElementById('nf-used').value || '0', 10);
+  const life_value = parseInt(document.getElementById('nf-life-value').value || '0', 10);
+
+  if(!name) return alert('請輸入治具名稱');
+  if(life_value <= 0) return alert('壽命值必須大於0');
+
+  try{
+    await api('/fixtures', 'POST', {name, status, life_type, used, life_value});
+    showNewFixtureModal(false);
+    document.getElementById('nf-name').value = '';
+    document.getElementById('nf-used').value = '0';
+    document.getElementById('nf-life-value').value = '1000';
+    loadFixtures();
+  }catch(e){ alert('新增失敗：'+e.message); }
+}
+
+async function editFixture(id){
+  const name = prompt('治具名稱：'); if(!name) return;
+  const life_value = parseInt(prompt('壽命（次數）', '1000')||'1000',10);
+  try{ await api(`/fixtures/${id}`,'PUT',{name,status:'active',life_type:'count',used:0,life_value}); loadFixtures(); }
+  catch(e){ alert('更新失敗：'+e.message); }
+}
+
+async function delFixture(id){
+  if(!confirm('確定刪除？')) return;
+  try{ await api(`/fixtures/${id}`,'DELETE'); loadFixtures(); }
+  catch(e){ alert('刪除失敗：'+e.message); }
+}
+
+async function importFixturesFromXlsx(inputEl){
+  const f = inputEl.files[0]; if(!f) return;
   const fd = new FormData(); fd.append('file', f);
   try{
-    const res = await fetch('/fixtures/import_xlsx', { method:'POST', body: fd }); // returns {ok:true}
-    if(!res.ok){ const t=await res.text(); throw new Error(t); }
-    alert('匯入成功'); loadFxModels(); loadFixtures();
+    const r = await fetch('/fixtures/import_xlsx',{method:'POST', body: fd});
+    if(!r.ok){ const t=await r.text(); throw new Error(t); }
+    alert('匯入成功'); loadFixtures();
   }catch(e){ alert('匯入失敗：'+e.message); }
-  finally{ fileInput.value=''; }
+  finally{ inputEl.value=''; }
 }
 
-/* ============ 記錄 ============ */
+/* ============ 開站數查詢 ============ */
+async function calcStations(){
+  const code = document.getElementById('modelCode').value.trim();
+  if(!code) return alert('請輸入機種代碼');
+  try{
+    const data = await api(`/models/max_stations?model_code=${encodeURIComponent(code)}`);
+    const tbody = Object.entries(data.stations)
+      .map(([s,n])=>`<tr><td>${s}</td><td>${n}</td></tr>`).join('');
+    document.getElementById('stationTable').innerHTML = tbody;
+  }catch(e){ alert('查詢失敗：'+e.message); }
+}
+
+/* ============ 使用/更換記錄 ============ */
 async function loadLogs(){
   try{
     const rows = await api('/logs');
     document.getElementById('lg-tbody').innerHTML = (rows||[]).map(r=>`
-      <tr><td>${r.created_at||''}</td><td>${r.fixture}</td><td>${r.type}</td><td>${r.note||''}</td></tr>
+      <tr><td>${r.created_at||''}</td><td>${r.fixture||''}</td><td>${r.type||''}</td><td>${r.note||''}</td></tr>
     `).join('');
   }catch(e){ console.error(e); }
 }
@@ -412,17 +613,18 @@ async function addLog(){
   const fixture = document.getElementById('lg-fx').value.trim();
   const type = document.getElementById('lg-type').value.trim();
   const note = document.getElementById('lg-note').value.trim();
-  if(!fixture || !type) return alert('請填寫治具與動作');
-  try{ await api('/logs','POST',{fixture,type,note}); loadLogs(); }
-  catch(e){ alert('新增失敗：'+e.message); }
+  if(!fixture || !type) return alert('請輸入治具與類型');
+  try{
+    await api('/logs','POST',{fixture,type,note});
+    document.getElementById('lg-fx').value=''; document.getElementById('lg-type').value=''; document.getElementById('lg-note').value='';
+    loadLogs();
+  }catch(e){ alert('新增失敗：'+e.message); }
 }
 
-/* ============ 後台：使用者 ============ */
+/* ============ 後台：使用者管理 ============ */
 async function loadUsers(){
   try{
-    const q = document.getElementById('us-q').value.trim();
-    const resp = await api('/users'+(q?`?q=${encodeURIComponent(q)}`:''));
-    const rows = (resp && resp.data) ? resp.data : []; // PageResp.data
+    const rows = await api('/users');
     document.getElementById('us-tbody').innerHTML = rows.map(u=>`
       <tr>
         <td>${u.username}</td><td>${u.role}</td>
@@ -452,9 +654,16 @@ async function delUser(username){
   catch(e){ alert('刪除失敗：'+e.message); }
 }
 
-/* ============ 後台：SMTP（表單送出） ============ */
+/* ============ 後台：SMTP ============ */
 async function loadSMTP(){
-  // 目前後端未提供 GET 端點；僅提供 POST 保存（見 main.py），因此這裡只負責送出保存。:contentReference[oaicite:3]{index=3}
+  try{
+    const settings = await api('/settings/smtp');
+    document.getElementById('smtp-host').value = settings.host || '';
+    document.getElementById('smtp-port').value = settings.port || '25';
+    document.getElementById('smtp-user').value = settings.user || '';
+    document.getElementById('smtp-pass').value = settings.pass || '';
+    document.getElementById('smtp-sender').value = settings.sender || '';
+  }catch(e){ console.error(e); }
 }
 async function saveSMTP(){
   const fd = new FormData();
@@ -498,7 +707,7 @@ async function importFxModels(inputEl){
   const f = inputEl.files[0]; if(!f) return;
   const fd = new FormData(); fd.append('file', f);
   try{
-    const r = await fetch('/fixtures/import_xlsx',{method:'POST', body: fd}); // 允許欄位：code,name,spec,note
+    const r = await fetch('/fixtures/import_xlsx',{method:'POST', body: fd});
     if(!r.ok){ const t=await r.text(); throw new Error(t); }
     alert('匯入成功'); loadFxModels();
   }catch(e){ alert('匯入失敗：'+e.message); }
@@ -544,22 +753,18 @@ function bindUI(){
   document.getElementById('btnDoLogin').onclick = doLogin;
   document.getElementById('btnLogout').onclick = doLogout;
 
-  // 收料
-  document.getElementById('btnRcAdd').onclick = addReceipt;
-  document.getElementById('btnRcReload').onclick = loadReceipts;
-
-  // 退料
-  document.getElementById('btnRtAdd').onclick = addReturn;
-  document.getElementById('btnRtReload').onclick = loadReturns;
+  // 收/退料
+  document.getElementById('btnMaterialReceive').onclick = ()=> switchMaterialMode('receive');
+  document.getElementById('btnMaterialReturn').onclick = ()=> switchMaterialMode('return');
+  document.querySelectorAll('input[name="material-type"]').forEach(r=> r.onchange = toggleMaterialType);
+  document.getElementById('btnMatAdd').onclick = addMaterial;
+  document.getElementById('btnMatReload').onclick = loadMaterialRecords;
 
   // 查詢
   document.getElementById('btnFxSearch').onclick = ()=> loadFixtures(document.getElementById('fx-q').value.trim());
-  document.getElementById('btnFxNew').onclick = async ()=>{
-    const name = prompt('治具名稱：'); if(!name) return;
-    const life_value = parseInt(prompt('壽命（次數）', '1000')||'1000',10);
-    try{ await api('/fixtures','POST',{name,status:'active',life_type:'count',used:0,life_value}); loadFixtures(); }
-    catch(e){ alert('新增失敗：'+e.message); }
-  };
+  document.getElementById('btnFxNew').onclick = ()=> showNewFixtureModal(true);
+  document.getElementById('btnNewFixtureCancel').onclick = ()=> showNewFixtureModal(false);
+  document.getElementById('btnNewFixtureSave').onclick = saveNewFixture;
   document.getElementById('fx-import').addEventListener('change', e=> importFixturesFromXlsx(e.target));
   document.getElementById('btnCalcStations').onclick = calcStations;
 
@@ -567,31 +772,16 @@ function bindUI(){
   document.getElementById('btnLogAdd').onclick = addLog;
   document.getElementById('btnLogReload').onclick = loadLogs;
 
-  // 使用者/SMTP
+  // 後台
+  document.querySelectorAll('.admin-tab').forEach(b=> b.addEventListener('click', ()=> goAdminTab(b.dataset.adminTab)));
   document.getElementById('btnUsSearch').onclick = loadUsers;
   document.getElementById('btnUsNew').onclick = newUser;
   document.getElementById('btnSmtpSave').onclick = saveSMTP;
-
-  // 資料維護
   document.getElementById('btnFxmAdd').onclick = addFxModel;
   document.getElementById('fxm-xlsx').addEventListener('change', e=> importFxModels(e.target));
   document.getElementById('btnMcmAdd').onclick = addMcModel;
   document.getElementById('mcm-xlsx').addEventListener('change', e=> importMcModels(e.target));
 }
-
-async function calcStations(){
-  const code = document.getElementById('modelCode').value.trim();
-  if(!code) return alert('請輸入機種代碼');
-  try{
-    const data = await api(`/models/max_stations?model_code=${encodeURIComponent(code)}`);
-    const tbody = Object.entries(data.stations)
-      .map(([s,n])=>`<tr><td>${s}</td><td>${n}</td></tr>`).join('');
-    document.getElementById('stationTable').innerHTML = tbody;
-  }catch(e){
-    alert('查詢失敗：'+e.message);
-  }
-}
-
 
 (function init(){
   try{ state.user = JSON.parse(localStorage.getItem('fx.user') || 'null'); }catch{}
