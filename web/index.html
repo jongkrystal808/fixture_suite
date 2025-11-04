@@ -446,28 +446,69 @@ function renderAuth(){
 }
 
 /* ============ 分頁切換 ============ */
-function goTab(name){
+function goTab(name, skipHash = false){
   document.querySelectorAll('.tab-pane').forEach(el=> el.classList.add('hidden'));
   const pane = document.getElementById('tab-'+name); if(pane) pane.classList.remove('hidden');
   document.querySelectorAll('.tab').forEach(b=> b.classList.remove('tab-active'));
   const btn = document.querySelector(`.tab[data-tab="${name}"]`); if(btn) btn.classList.add('tab-active');
+
+  // 更新URL hash（除非是從hash變化觸發的）
+  if(!skipHash) {
+    window.location.hash = name;
+  }
+
   if(name==='dashboard') loadDashboard();
   if(name==='query') loadFixtures();
-  if(name==='logs') loadLogs();
-  if(name==='material') loadMaterialRecords();
+  if(name==='logs') {
+    switchLogMode('usage'); // 初始化為使用記錄模式
+  }
+  if(name==='material') {
+    switchMaterialMode('receive'); // 初始化為收料模式
+  }
   if(name==='admin'){ goAdminTab('users'); }
 }
 
 /* 後台子分頁切換 */
-function goAdminTab(name){
+function goAdminTab(name, skipHash = false){
+  console.log('goAdminTab called with:', name);
+
   document.querySelectorAll('.admin-pane').forEach(el=> el.classList.add('hidden'));
-  const pane = document.getElementById('admin-'+name); if(pane) pane.classList.remove('hidden');
+  const pane = document.getElementById('admin-'+name);
+
+  if(pane) {
+    pane.classList.remove('hidden');
+    console.log('Admin pane shown:', 'admin-'+name);
+  } else {
+    console.error('Admin pane not found:', 'admin-'+name);
+  }
+
   document.querySelectorAll('.admin-tab').forEach(b=> b.classList.remove('tab-active'));
-  const btn = document.querySelector(`.admin-tab[data-admin-tab="${name}"]`); if(btn) btn.classList.add('tab-active');
-  if(name==='users') loadUsers();
-  if(name==='smtp') loadSMTP();
-  if(name==='fixtures') loadFxModels();
-  if(name==='machines') loadMcModels();
+  const btn = document.querySelector(`.admin-tab[data-admin-tab="${name}"]`);
+  if(btn) {
+    btn.classList.add('tab-active');
+  }
+
+  // 更新URL hash為 admin-子標籤名稱（除非是從hash變化觸發的）
+  if(!skipHash) {
+    window.location.hash = 'admin-' + name;
+  }
+
+  if(name==='users') {
+    console.log('Loading users...');
+    loadUsers();
+  }
+  if(name==='smtp') {
+    console.log('Loading SMTP settings...');
+    loadSMTP();
+  }
+  if(name==='fixtures') {
+    console.log('Loading fixture models...');
+    loadFxModels();
+  }
+  if(name==='machines') {
+    console.log('Loading machine models...');
+    loadMcModels();
+  }
 }
 
 /* ============ 儀表板 ============ */
@@ -504,11 +545,23 @@ function setNum(id, v){ const el=document.getElementById(id); if(el) el.textCont
 function switchMaterialMode(mode){
   state.materialMode = mode;
   const isReceive = mode === 'receive';
-  document.getElementById('btnMaterialReceive').classList.toggle('btn-primary', isReceive);
-  document.getElementById('btnMaterialReceive').classList.toggle('btn', !isReceive);
-  document.getElementById('btnMaterialReturn').classList.toggle('btn-primary', !isReceive);
-  document.getElementById('btnMaterialReturn').classList.toggle('btn', isReceive);
-  document.getElementById('mat-table-title').textContent = isReceive ? '收料記錄' : '退料記錄';
+
+  // 更新按鈕樣式
+  const btnReceive = document.getElementById('btnMaterialReceive');
+  const btnReturn = document.getElementById('btnMaterialReturn');
+
+  if(btnReceive && btnReturn) {
+    btnReceive.classList.toggle('btn-primary', isReceive);
+    btnReceive.classList.toggle('btn', !isReceive);
+    btnReturn.classList.toggle('btn-primary', !isReceive);
+    btnReturn.classList.toggle('btn', isReceive);
+  }
+
+  const title = document.getElementById('mat-table-title');
+  if(title) {
+    title.textContent = isReceive ? '收料記錄' : '退料記錄';
+  }
+
   loadMaterialRecords();
 }
 
@@ -668,16 +721,26 @@ function switchLogMode(mode){
   const isUsage = mode === 'usage';
 
   // 切換按鈕樣式
-  document.getElementById('btnLogUsage').classList.toggle('btn-primary', isUsage);
-  document.getElementById('btnLogUsage').classList.toggle('btn', !isUsage);
-  document.getElementById('btnLogReplacement').classList.toggle('btn-primary', !isUsage);
-  document.getElementById('btnLogReplacement').classList.toggle('btn', isUsage);
+  const btnUsage = document.getElementById('btnLogUsage');
+  const btnReplacement = document.getElementById('btnLogReplacement');
+
+  if(btnUsage && btnReplacement) {
+    btnUsage.classList.toggle('btn-primary', isUsage);
+    btnUsage.classList.toggle('btn', !isUsage);
+    btnReplacement.classList.toggle('btn-primary', !isUsage);
+    btnReplacement.classList.toggle('btn', isUsage);
+  }
 
   // 切換表單和表格
-  document.getElementById('usage-form').classList.toggle('hidden', !isUsage);
-  document.getElementById('replacement-form').classList.toggle('hidden', isUsage);
-  document.getElementById('usage-table').classList.toggle('hidden', !isUsage);
-  document.getElementById('replacement-table').classList.toggle('hidden', isUsage);
+  const usageForm = document.getElementById('usage-form');
+  const replacementForm = document.getElementById('replacement-form');
+  const usageTable = document.getElementById('usage-table');
+  const replacementTable = document.getElementById('replacement-table');
+
+  if(usageForm) usageForm.classList.toggle('hidden', !isUsage);
+  if(replacementForm) replacementForm.classList.toggle('hidden', isUsage);
+  if(usageTable) usageTable.classList.toggle('hidden', !isUsage);
+  if(replacementTable) replacementTable.classList.toggle('hidden', isUsage);
 
   loadLogs();
 }
@@ -830,12 +893,21 @@ async function delUser(username){
 async function loadSMTP(){
   try{
     const settings = await api('/settings/smtp');
-    document.getElementById('smtp-host').value = settings.host || '';
-    document.getElementById('smtp-port').value = settings.port || '25';
-    document.getElementById('smtp-user').value = settings.user || '';
-    document.getElementById('smtp-pass').value = settings.pass || '';
-    document.getElementById('smtp-sender').value = settings.sender || '';
-  }catch(e){ console.error(e); }
+    const hostEl = document.getElementById('smtp-host');
+    const portEl = document.getElementById('smtp-port');
+    const userEl = document.getElementById('smtp-user');
+    const passEl = document.getElementById('smtp-pass');
+    const senderEl = document.getElementById('smtp-sender');
+
+    if(hostEl) hostEl.value = settings.host || '';
+    if(portEl) portEl.value = settings.port || '25';
+    if(userEl) userEl.value = settings.user || '';
+    if(passEl) passEl.value = settings.pass || '';
+    if(senderEl) senderEl.value = settings.sender || '';
+  }catch(e){
+    console.error('loadSMTP error:', e);
+    alert('載入SMTP設定失敗：' + e.message);
+  }
 }
 async function saveSMTP(){
   const fd = new FormData();
@@ -855,10 +927,16 @@ async function saveSMTP(){
 async function loadFxModels(){
   try{
     const rows = await api('/fixtures/models');
-    document.getElementById('fxm-tbody').innerHTML = (rows||[]).map(r=>`
-      <tr><td>${r.id}</td><td>${r.code||''}</td><td>${r.name||''}</td><td>${r.spec||''}</td><td>${r.note||''}</td></tr>
-    `).join('');
-  }catch(e){ console.error(e); }
+    const tbody = document.getElementById('fxm-tbody');
+    if(tbody) {
+      tbody.innerHTML = (rows||[]).map(r=>`
+        <tr><td>${r.id}</td><td>${r.code||''}</td><td>${r.name||''}</td><td>${r.spec||''}</td><td>${r.note||''}</td></tr>
+      `).join('');
+    }
+  }catch(e){
+    console.error('loadFxModels error:', e);
+    alert('載入治具資料失敗：' + e.message);
+  }
 }
 async function addFxModel(){
   const code = document.getElementById('fxm-code').value.trim();
@@ -889,10 +967,16 @@ async function importFxModels(inputEl){
 async function loadMcModels(){
   try{
     const rows = await api('/machines/models');
-    document.getElementById('mcm-tbody').innerHTML = (rows||[]).map(r=>`
-      <tr><td>${r.id}</td><td>${r.code||''}</td><td>${r.name||''}</td><td>${r.note||''}</td></tr>
-    `).join('');
-  }catch(e){ console.error(e); }
+    const tbody = document.getElementById('mcm-tbody');
+    if(tbody) {
+      tbody.innerHTML = (rows||[]).map(r=>`
+        <tr><td>${r.id}</td><td>${r.code||''}</td><td>${r.name||''}</td><td>${r.note||''}</td></tr>
+      `).join('');
+    }
+  }catch(e){
+    console.error('loadMcModels error:', e);
+    alert('載入機種資料失敗：' + e.message);
+  }
 }
 async function addMcModel(){
   const code = document.getElementById('mcm-code').value.trim();
@@ -920,42 +1004,72 @@ async function importMcModels(inputEl){
 
 /* ============ 綁定事件與啟動 ============ */
 function bindUI(){
-  document.getElementById('btnLogin').onclick = ()=> showLogin(true);
-  document.getElementById('btnLoginCancel').onclick = ()=> showLogin(false);
-  document.getElementById('btnDoLogin').onclick = doLogin;
-  document.getElementById('btnLogout').onclick = doLogout;
+  // 安全綁定函數
+  const safeBind = (id, event, handler) => {
+    const el = document.getElementById(id);
+    if(el) {
+      el[event] = handler;
+    } else {
+      console.warn(`Element not found: ${id}`);
+    }
+  };
+
+  safeBind('btnLogin', 'onclick', ()=> showLogin(true));
+  safeBind('btnLoginCancel', 'onclick', ()=> showLogin(false));
+  safeBind('btnDoLogin', 'onclick', doLogin);
+  safeBind('btnLogout', 'onclick', doLogout);
 
   // 收/退料
-  document.getElementById('btnMaterialReceive').onclick = ()=> switchMaterialMode('receive');
-  document.getElementById('btnMaterialReturn').onclick = ()=> switchMaterialMode('return');
+  safeBind('btnMaterialReceive', 'onclick', ()=> switchMaterialMode('receive'));
+  safeBind('btnMaterialReturn', 'onclick', ()=> switchMaterialMode('return'));
   document.querySelectorAll('input[name="material-type"]').forEach(r=> r.onchange = toggleMaterialType);
-  document.getElementById('btnMatAdd').onclick = addMaterial;
-  document.getElementById('btnMatReload').onclick = loadMaterialRecords;
+  safeBind('btnMatAdd', 'onclick', addMaterial);
+  safeBind('btnMatReload', 'onclick', loadMaterialRecords);
 
   // 查詢
-  document.getElementById('btnFxSearch').onclick = ()=> loadFixtures(document.getElementById('fx-q').value.trim());
-  document.getElementById('btnFxNew').onclick = ()=> showNewFixtureModal(true);
-  document.getElementById('btnNewFixtureCancel').onclick = ()=> showNewFixtureModal(false);
-  document.getElementById('btnNewFixtureSave').onclick = saveNewFixture;
-  document.getElementById('fx-import').addEventListener('change', e=> importFixturesFromXlsx(e.target));
-  document.getElementById('btnCalcStations').onclick = calcStations;
+  safeBind('btnFxSearch', 'onclick', ()=> {
+    const q = document.getElementById('fx-q');
+    loadFixtures(q ? q.value.trim() : '');
+  });
+  safeBind('btnFxNew', 'onclick', ()=> showNewFixtureModal(true));
+  safeBind('btnNewFixtureCancel', 'onclick', ()=> showNewFixtureModal(false));
+  safeBind('btnNewFixtureSave', 'onclick', saveNewFixture);
+
+  const fxImport = document.getElementById('fx-import');
+  if(fxImport) fxImport.addEventListener('change', e=> importFixturesFromXlsx(e.target));
+
+  safeBind('btnCalcStations', 'onclick', calcStations);
 
   // 記錄
-  document.getElementById('btnLogUsage').onclick = ()=> switchLogMode('usage');
-  document.getElementById('btnLogReplacement').onclick = ()=> switchLogMode('replacement');
-  document.getElementById('btnUsageAdd').onclick = addUsageLog;
-  document.getElementById('btnReplaceAdd').onclick = addReplacementLog;
-  document.getElementById('btnLogReload').onclick = loadLogs;
+  safeBind('btnLogUsage', 'onclick', ()=> switchLogMode('usage'));
+  safeBind('btnLogReplacement', 'onclick', ()=> switchLogMode('replacement'));
+  safeBind('btnUsageAdd', 'onclick', addUsageLog);
+  safeBind('btnReplaceAdd', 'onclick', addReplacementLog);
+  safeBind('btnLogReload', 'onclick', loadLogs);
 
   // 後台
-  document.querySelectorAll('.admin-tab').forEach(b=> b.addEventListener('click', ()=> goAdminTab(b.dataset.adminTab)));
-  document.getElementById('btnUsSearch').onclick = loadUsers;
-  document.getElementById('btnUsNew').onclick = newUser;
-  document.getElementById('btnSmtpSave').onclick = saveSMTP;
-  document.getElementById('btnFxmAdd').onclick = addFxModel;
-  document.getElementById('fxm-xlsx').addEventListener('change', e=> importFxModels(e.target));
-  document.getElementById('btnMcmAdd').onclick = addMcModel;
-  document.getElementById('mcm-xlsx').addEventListener('change', e=> importMcModels(e.target));
+  document.querySelectorAll('.admin-tab').forEach(b=> {
+    b.addEventListener('click', ()=> {
+      const tab = b.dataset.adminTab;
+      console.log('Admin tab clicked:', tab);
+      goAdminTab(tab);
+    });
+  });
+
+  safeBind('btnUsSearch', 'onclick', loadUsers);
+  safeBind('btnUsNew', 'onclick', newUser);
+  safeBind('btnSmtpSave', 'onclick', saveSMTP);
+  safeBind('btnFxmAdd', 'onclick', addFxModel);
+
+  const fxmXlsx = document.getElementById('fxm-xlsx');
+  if(fxmXlsx) fxmXlsx.addEventListener('change', e=> importFxModels(e.target));
+
+  safeBind('btnMcmAdd', 'onclick', addMcModel);
+
+  const mcmXlsx = document.getElementById('mcm-xlsx');
+  if(mcmXlsx) mcmXlsx.addEventListener('change', e=> importMcModels(e.target));
+
+  console.log('UI binding completed');
 }
 
 (function init(){
@@ -963,8 +1077,45 @@ function bindUI(){
   renderAuth();
   document.querySelectorAll('.tab').forEach(b=> b.addEventListener('click', ()=> goTab(b.dataset.tab)));
   bindUI();
-  goTab('dashboard'); loadDashboard();
+
+  // 處理URL hash變化
+  window.addEventListener('hashchange', handleHashChange);
+
+  // 初始化時根據hash載入對應頁面
+  const hash = window.location.hash.substring(1); // 移除 # 符號
+  if(hash) {
+    handleHashChange();
+  } else {
+    goTab('dashboard');
+    loadDashboard();
+  }
 })();
+
+// 處理hash變化
+function handleHashChange(){
+  const hash = window.location.hash.substring(1);
+  console.log('Hash changed to:', hash);
+
+  if(!hash) {
+    goTab('dashboard', true);
+    return;
+  }
+
+  // 檢查是否為後台管理的子頁面
+  if(hash.startsWith('admin-')) {
+    const subTab = hash.substring(6); // 移除 'admin-' 前綴
+    goTab('admin', true);
+    goAdminTab(subTab, true);
+  } else {
+    // 一般頁面
+    const validTabs = ['dashboard', 'material', 'query', 'openstations', 'logs', 'admin'];
+    if(validTabs.includes(hash)) {
+      goTab(hash, true);
+    } else {
+      goTab('dashboard', true);
+    }
+  }
+}
 </script>
 </body>
 </html>
