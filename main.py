@@ -205,6 +205,35 @@ def init_tables():
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     """)
 
+    # usage_logs (使用記錄)
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS usage_logs (
+            log_id INT AUTO_INCREMENT PRIMARY KEY,
+            fixture_id VARCHAR(50) NOT NULL,
+            serial_number VARCHAR(100),
+            station_id INT,
+            use_count INT DEFAULT 1,
+            abnormal_status VARCHAR(255),
+            note TEXT,
+            operator VARCHAR(100),
+            used_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    """)
+
+    # replacement_logs (更換記錄)
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS replacement_logs (
+            replacement_id INT AUTO_INCREMENT PRIMARY KEY,
+            fixture_id VARCHAR(50) NOT NULL,
+            serial_number VARCHAR(100),
+            replacement_date DATE NOT NULL,
+            reason TEXT,
+            executor VARCHAR(100),
+            note TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    """)
+
     # settings (包含 smtp 設定)
     c.execute("""
         CREATE TABLE IF NOT EXISTS settings (
@@ -280,6 +309,23 @@ class ReturnIn(BaseModel):
 class LogIn(BaseModel):
     fixture: str
     type: str
+    note: Optional[str] = None
+
+class UsageLogIn(BaseModel):
+    fixture_id: str
+    serial_number: Optional[str] = None
+    station_id: Optional[int] = None
+    use_count: int = 1
+    abnormal_status: Optional[str] = None
+    note: Optional[str] = None
+    operator: Optional[str] = None
+
+class ReplacementLogIn(BaseModel):
+    fixture_id: str
+    serial_number: Optional[str] = None
+    replacement_date: str
+    reason: Optional[str] = None
+    executor: Optional[str] = None
     note: Optional[str] = None
 
 # ---------- Auth ----------
@@ -593,3 +639,45 @@ def get_max_stations(model_code: str):
 
     result = {s: min(v) if v else 0 for s, v in station_avail.items()}
     return {"model": model_code, "stations": result}
+
+# ---------- Usage Logs (使用記錄) ----------
+@app.get("/usage_logs")
+def list_usage_logs():
+    conn = get_db(); c = conn.cursor()
+    c.execute("SELECT * FROM usage_logs ORDER BY log_id DESC")
+    rows = c.fetchall() or []; conn.close(); return rows
+
+@app.post("/usage_logs")
+def add_usage_log(body: UsageLogIn):
+    conn = get_db(); c = conn.cursor()
+    c.execute("""INSERT INTO usage_logs (fixture_id, serial_number, station_id, use_count, abnormal_status, note, operator) 
+                 VALUES (%s,%s,%s,%s,%s,%s,%s)""",
+              (body.fixture_id, body.serial_number, body.station_id, body.use_count, body.abnormal_status, body.note, body.operator))
+    conn.commit(); conn.close(); return {"ok": True}
+
+@app.delete("/usage_logs/{log_id}")
+def del_usage_log(log_id: int):
+    conn = get_db(); c = conn.cursor()
+    c.execute("DELETE FROM usage_logs WHERE log_id=%s", (log_id,))
+    conn.commit(); conn.close(); return {"ok": True}
+
+# ---------- Replacement Logs (更換記錄) ----------
+@app.get("/replacement_logs")
+def list_replacement_logs():
+    conn = get_db(); c = conn.cursor()
+    c.execute("SELECT * FROM replacement_logs ORDER BY replacement_id DESC")
+    rows = c.fetchall() or []; conn.close(); return rows
+
+@app.post("/replacement_logs")
+def add_replacement_log(body: ReplacementLogIn):
+    conn = get_db(); c = conn.cursor()
+    c.execute("""INSERT INTO replacement_logs (fixture_id, serial_number, replacement_date, reason, executor, note) 
+                 VALUES (%s,%s,%s,%s,%s,%s)""",
+              (body.fixture_id, body.serial_number, body.replacement_date, body.reason, body.executor, body.note))
+    conn.commit(); conn.close(); return {"ok": True}
+
+@app.delete("/replacement_logs/{replacement_id}")
+def del_replacement_log(replacement_id: int):
+    conn = get_db(); c = conn.cursor()
+    c.execute("DELETE FROM replacement_logs WHERE replacement_id=%s", (replacement_id,))
+    conn.commit(); conn.close(); return {"ok": True}

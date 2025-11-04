@@ -198,17 +198,73 @@
 
     <!-- 使用/更換記錄 -->
     <section id="tab-logs" class="tab-pane hidden">
-      <div class="card space-y-3">
-        <h2 class="text-base font-semibold">使用 / 更換記錄</h2>
-        <div class="flex gap-3 flex-wrap">
-          <input id="lg-fx" class="input" placeholder="治具名稱 / ID" style="max-width:240px" />
-          <input id="lg-type" class="input" placeholder="動作 (use/replace)" style="max-width:200px" />
-          <input id="lg-note" class="input" placeholder="備註" style="max-width:260px" />
-          <button id="btnLogAdd" class="btn btn-primary">新增記錄</button>
+      <div class="card space-y-4">
+        <div class="flex items-center gap-4">
+          <h2 class="text-base font-semibold">使用/更換記錄</h2>
+          <div class="flex gap-2">
+            <button id="btnLogUsage" class="btn btn-primary">使用記錄</button>
+            <button id="btnLogReplacement" class="btn">更換記錄</button>
+          </div>
+        </div>
+
+        <!-- 使用記錄表單 -->
+        <div id="usage-form" class="space-y-3">
+          <h3 class="text-sm font-semibold">新增使用記錄</h3>
+          <div class="grid md:grid-cols-4 gap-3">
+            <input id="usage-fixture-id" class="input" placeholder="治具編號" />
+            <input id="usage-serial" class="input" placeholder="序號（選填）" />
+            <input id="usage-station" class="input" type="number" placeholder="站別ID（選填）" />
+            <input id="usage-count" class="input" type="number" placeholder="使用次數" value="1" />
+          </div>
+          <div class="grid md:grid-cols-4 gap-3">
+            <input id="usage-abnormal" class="input" placeholder="異常狀態（選填）" />
+            <input id="usage-operator" class="input" placeholder="操作人員" readonly />
+            <input id="usage-note" class="input" placeholder="備註（選填）" />
+            <button id="btnUsageAdd" class="btn btn-primary">新增</button>
+          </div>
+        </div>
+
+        <!-- 更換記錄表單 -->
+        <div id="replacement-form" class="space-y-3 hidden">
+          <h3 class="text-sm font-semibold">新增更換記錄</h3>
+          <div class="grid md:grid-cols-4 gap-3">
+            <input id="replace-fixture-id" class="input" placeholder="治具編號" />
+            <input id="replace-serial" class="input" placeholder="序號（選填）" />
+            <input id="replace-date" class="input" type="date" placeholder="更換日期" />
+            <input id="replace-executor" class="input" placeholder="執行人員" readonly />
+          </div>
+          <div class="grid md:grid-cols-4 gap-3">
+            <input id="replace-reason" class="input md:col-span-2" placeholder="更換原因（選填）" />
+            <input id="replace-note" class="input" placeholder="備註（選填）" />
+            <button id="btnReplaceAdd" class="btn btn-primary">新增</button>
+          </div>
+        </div>
+
+        <div class="flex gap-2 border-t pt-3">
           <button id="btnLogReload" class="btn">重新整理</button>
           <a id="btnLogExport" class="btn" href="/logs/export">匯出 CSV</a>
         </div>
-        <table class="table"><thead><tr><th>時間</th><th>治具</th><th>類型</th><th>備註</th></tr></thead><tbody id="lg-tbody"></tbody></table>
+
+        <!-- 記錄表格 -->
+        <div id="usage-table" class="border-t pt-4">
+          <h3 class="text-sm font-semibold mb-2">使用記錄列表</h3>
+          <table class="table">
+            <thead>
+              <tr><th>ID</th><th>治具編號</th><th>序號</th><th>站別</th><th>使用次數</th><th>異常狀態</th><th>操作人員</th><th>備註</th><th>時間</th><th></th></tr>
+            </thead>
+            <tbody id="usage-tbody"></tbody>
+          </table>
+        </div>
+
+        <div id="replacement-table" class="border-t pt-4 hidden">
+          <h3 class="text-sm font-semibold mb-2">更換記錄列表</h3>
+          <table class="table">
+            <thead>
+              <tr><th>ID</th><th>治具編號</th><th>序號</th><th>更換日期</th><th>更換原因</th><th>執行人員</th><th>備註</th><th>建立時間</th><th></th></tr>
+            </thead>
+            <tbody id="replacement-tbody"></tbody>
+          </table>
+        </div>
       </div>
     </section>
 
@@ -372,6 +428,8 @@ async function doLogin(){
     state.user = resp; localStorage.setItem('fx.user', JSON.stringify(resp));
     renderAuth(); showLogin(false); goTab('dashboard'); loadDashboard();
     document.getElementById('mat-operator').value = username;
+    document.getElementById('usage-operator').value = username;
+    document.getElementById('replace-executor').value = username;
   }catch(e){ err.textContent = '登入失敗：'+e.message; err.classList.remove('hidden'); }
 }
 function doLogout(){ localStorage.removeItem('fx.user'); state.user=null; renderAuth(); goTab('dashboard'); }
@@ -381,6 +439,8 @@ function renderAuth(){
     span.textContent = `您好，${state.user.username}（${state.user.role}）`;
     btn.textContent='登出'; btn.onclick=doLogout;
     document.getElementById('mat-operator').value = state.user.username;
+    document.getElementById('usage-operator').value = state.user.username;
+    document.getElementById('replace-executor').value = state.user.username;
   }
   else{ span.textContent = '未登入'; btn.textContent='登入'; btn.onclick=()=>{ showLogin(true); }; }
 }
@@ -601,24 +661,136 @@ async function calcStations(){
 }
 
 /* ============ 使用/更換記錄 ============ */
+const logState = { mode: 'usage' }; // 'usage' or 'replacement'
+
+function switchLogMode(mode){
+  logState.mode = mode;
+  const isUsage = mode === 'usage';
+
+  // 切換按鈕樣式
+  document.getElementById('btnLogUsage').classList.toggle('btn-primary', isUsage);
+  document.getElementById('btnLogUsage').classList.toggle('btn', !isUsage);
+  document.getElementById('btnLogReplacement').classList.toggle('btn-primary', !isUsage);
+  document.getElementById('btnLogReplacement').classList.toggle('btn', isUsage);
+
+  // 切換表單和表格
+  document.getElementById('usage-form').classList.toggle('hidden', !isUsage);
+  document.getElementById('replacement-form').classList.toggle('hidden', isUsage);
+  document.getElementById('usage-table').classList.toggle('hidden', !isUsage);
+  document.getElementById('replacement-table').classList.toggle('hidden', isUsage);
+
+  loadLogs();
+}
+
 async function loadLogs(){
+  if(logState.mode === 'usage') {
+    await loadUsageLogs();
+  } else {
+    await loadReplacementLogs();
+  }
+}
+
+async function loadUsageLogs(){
   try{
-    const rows = await api('/logs');
-    document.getElementById('lg-tbody').innerHTML = (rows||[]).map(r=>`
-      <tr><td>${r.created_at||''}</td><td>${r.fixture||''}</td><td>${r.type||''}</td><td>${r.note||''}</td></tr>
+    const rows = await api('/usage_logs');
+    document.getElementById('usage-tbody').innerHTML = (rows||[]).map(r=>`
+      <tr>
+        <td>${r.log_id}</td><td>${r.fixture_id||''}</td><td>${r.serial_number||''}</td>
+        <td>${r.station_id||''}</td><td>${r.use_count||''}</td><td>${r.abnormal_status||''}</td>
+        <td>${r.operator||''}</td><td>${r.note||''}</td><td>${r.used_at||''}</td>
+        <td><button class="btn" onclick="deleteUsageLog(${r.log_id})">刪除</button></td>
+      </tr>
     `).join('');
   }catch(e){ console.error(e); }
 }
-async function addLog(){
-  const fixture = document.getElementById('lg-fx').value.trim();
-  const type = document.getElementById('lg-type').value.trim();
-  const note = document.getElementById('lg-note').value.trim();
-  if(!fixture || !type) return alert('請輸入治具與類型');
+
+async function loadReplacementLogs(){
   try{
-    await api('/logs','POST',{fixture,type,note});
-    document.getElementById('lg-fx').value=''; document.getElementById('lg-type').value=''; document.getElementById('lg-note').value='';
-    loadLogs();
+    const rows = await api('/replacement_logs');
+    document.getElementById('replacement-tbody').innerHTML = (rows||[]).map(r=>`
+      <tr>
+        <td>${r.replacement_id}</td><td>${r.fixture_id||''}</td><td>${r.serial_number||''}</td>
+        <td>${r.replacement_date||''}</td><td>${r.reason||''}</td><td>${r.executor||''}</td>
+        <td>${r.note||''}</td><td>${r.created_at||''}</td>
+        <td><button class="btn" onclick="deleteReplacementLog(${r.replacement_id})">刪除</button></td>
+      </tr>
+    `).join('');
+  }catch(e){ console.error(e); }
+}
+
+async function addUsageLog(){
+  const fixture_id = document.getElementById('usage-fixture-id').value.trim();
+  const serial_number = document.getElementById('usage-serial').value.trim();
+  const station_id = document.getElementById('usage-station').value.trim();
+  const use_count = parseInt(document.getElementById('usage-count').value) || 1;
+  const abnormal_status = document.getElementById('usage-abnormal').value.trim();
+  const operator = document.getElementById('usage-operator').value.trim();
+  const note = document.getElementById('usage-note').value.trim();
+
+  if(!fixture_id) return alert('請填寫治具編號');
+
+  try{
+    await api('/usage_logs','POST',{
+      fixture_id,
+      serial_number: serial_number || null,
+      station_id: station_id ? parseInt(station_id) : null,
+      use_count,
+      abnormal_status: abnormal_status || null,
+      note: note || null,
+      operator: operator || null
+    });
+    document.getElementById('usage-fixture-id').value='';
+    document.getElementById('usage-serial').value='';
+    document.getElementById('usage-station').value='';
+    document.getElementById('usage-count').value='1';
+    document.getElementById('usage-abnormal').value='';
+    document.getElementById('usage-note').value='';
+    loadUsageLogs();
   }catch(e){ alert('新增失敗：'+e.message); }
+}
+
+async function addReplacementLog(){
+  const fixture_id = document.getElementById('replace-fixture-id').value.trim();
+  const serial_number = document.getElementById('replace-serial').value.trim();
+  const replacement_date = document.getElementById('replace-date').value;
+  const executor = document.getElementById('replace-executor').value.trim();
+  const reason = document.getElementById('replace-reason').value.trim();
+  const note = document.getElementById('replace-note').value.trim();
+
+  if(!fixture_id || !replacement_date) return alert('請填寫治具編號和更換日期');
+
+  try{
+    await api('/replacement_logs','POST',{
+      fixture_id,
+      serial_number: serial_number || null,
+      replacement_date,
+      reason: reason || null,
+      executor: executor || null,
+      note: note || null
+    });
+    document.getElementById('replace-fixture-id').value='';
+    document.getElementById('replace-serial').value='';
+    document.getElementById('replace-date').value='';
+    document.getElementById('replace-reason').value='';
+    document.getElementById('replace-note').value='';
+    loadReplacementLogs();
+  }catch(e){ alert('新增失敗：'+e.message); }
+}
+
+async function deleteUsageLog(id){
+  if(!confirm('確定刪除此使用記錄？')) return;
+  try{
+    await api(`/usage_logs/${id}`, 'DELETE');
+    loadUsageLogs();
+  }catch(e){ alert('刪除失敗：'+e.message); }
+}
+
+async function deleteReplacementLog(id){
+  if(!confirm('確定刪除此更換記錄？')) return;
+  try{
+    await api(`/replacement_logs/${id}`, 'DELETE');
+    loadReplacementLogs();
+  }catch(e){ alert('刪除失敗：'+e.message); }
 }
 
 /* ============ 後台：使用者管理 ============ */
@@ -769,7 +941,10 @@ function bindUI(){
   document.getElementById('btnCalcStations').onclick = calcStations;
 
   // 記錄
-  document.getElementById('btnLogAdd').onclick = addLog;
+  document.getElementById('btnLogUsage').onclick = ()=> switchLogMode('usage');
+  document.getElementById('btnLogReplacement').onclick = ()=> switchLogMode('replacement');
+  document.getElementById('btnUsageAdd').onclick = addUsageLog;
+  document.getElementById('btnReplaceAdd').onclick = addReplacementLog;
   document.getElementById('btnLogReload').onclick = loadLogs;
 
   // 後台
